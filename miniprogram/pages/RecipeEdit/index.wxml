@@ -1,8 +1,8 @@
-<view class="container">
+<view class="container" wx:if="{{canEdit}}">
   <!-- 页面头部 -->
   <view class="page-header">
     <text class="page-title">{{dishName || '菜谱'}}</text>
-    <text class="page-subtitle">写下家里的私房做法</text>
+    <text class="page-subtitle">填写食材和做法</text>
   </view>
 
   <!-- 表单区域 -->
@@ -72,5 +72,11 @@
       <text>{{saving ? '保存中...' : '保存菜谱'}}</text>
     </view>
   </view>
+</view>
+<view class="form-section" wx:elif="{{!loadingDish}}">
+  <view class="input-card">
+    <text class="label-text">暂无可编辑的菜谱</text>
+  </view>
+  <view class="btn-save" bindtap="backToDetail">返回</view>
 </view>
 <bind-guard />

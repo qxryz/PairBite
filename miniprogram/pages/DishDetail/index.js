@@ -1,4 +1,5 @@
 const app = getApp()
+const { normalizeProduct } = require('../../utils/product.js')
 
 Page({
   data: {
@@ -27,7 +28,7 @@ Page({
   // 获取openid
   async getOpenId() {
     try {
-      const res = await wx.cloud.callFunction({ name: 'getOpenId' })
+      const res = await app.callFunction({ name: 'getOpenId' })
       const openid = res.result?.openid || ''
       this.setData({ openid })
     } catch (e) {
@@ -40,7 +41,7 @@ Page({
     if (!this.data._id) return
 
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await app.callFunction({
         name: 'getCoupleData',
         data: {
           collection: app.globalData.collectionDishList,
@@ -52,9 +53,11 @@ Page({
         throw new Error(res.result?.message || '加载失败')
       }
 
-      const dish = res.result.data
+      const dish = normalizeProduct(res.result.data)
+      await app.convertFileURLs([dish], ['imageUrl'])
       this.setData({
         dish,
+        previewImageUrl: '',
         dateText: this.formatDate(dish.createTime),
         creatorName: this.getCreatorName(dish._openid)
       })
@@ -93,6 +96,7 @@ Page({
 
   // 填写/编辑菜谱
   editRecipeManual() {
+    if (!this.data.dish || this.data.dish.type !== 'food') return
     wx.navigateTo({
       url: `/pages/RecipeEdit/index?id=${this.data._id}`
     })
@@ -107,7 +111,7 @@ Page({
       success: async (res) => {
         if (res.confirm) {
           try {
-            const result = await wx.cloud.callFunction({
+            const result = await app.callFunction({
               name: 'updateCoupleData',
               data: {
                 collection: app.globalData.collectionDishList,

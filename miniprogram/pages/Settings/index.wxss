@@ -330,3 +330,9 @@
   color: white;
   font-weight: 500;
 }
+
+.demo-settings { padding:24rpx; }
+.demo-caption { display:block; color:#777; font-size:24rpx; margin-bottom:20rpx; }
+.demo-identity-row { display:flex; gap:20rpx; }
+.demo-identity { flex:1; font-size:28rpx; background:#F5F9F0; color:#54765F; }
+.demo-identity.selected { background:#6FCF97; color:#fff; }

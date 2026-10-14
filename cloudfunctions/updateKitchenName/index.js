@@ -1,53 +1,29 @@
-// 云函数入口文件 - 更新厨房名称
+// 更新双方共享名称；解绑或改绑不能把名称写入第三人的空间。
 const cloud = require('wx-server-sdk')
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+const db = cloud.database({ throwOnNotFound: false })
 
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-})
-
-const db = cloud.database()
-
-// 云函数入口函数
-exports.main = async (event, context) => {
-  const wxContext = cloud.getWXContext()
-  const currentOpenid = wxContext.OPENID
-  const { kitchenName } = event
-
-  // 验证名称
-  if (!kitchenName || kitchenName.length > 8) {
-    return { success: false, message: '名称不能超过8个字' }
-  }
-
+exports.main = async (event = {}) => {
+  const openid = cloud.getWXContext().OPENID
+  const kitchenName = event && event.kitchenName
+  if (!openid) return { success: false, message: '请先登录' }
+  if (typeof kitchenName !== 'string' || !kitchenName.trim() || [...kitchenName.trim()].length > 8) return { success: false, message: '名称需为1至8个字' }
   try {
-    // 获取当前用户
-    const userRes = await db.collection('User').doc(currentOpenid).get()
-    const currentUser = userRes.data
-
-    if (!currentUser) {
-      return { success: false, message: '用户不存在' }
-    }
-
-    // 更新当前用户的厨房名称
-    await db.collection('User').doc(currentOpenid).update({
-      data: { kitchenName }
+    const result = await db.runTransaction(async transaction => {
+      const users = transaction.collection('User')
+      const { data: user } = await users.doc(openid).get()
+      if (!user) return { success: false, message: '用户不存在' }
+      if (user.partnerId && user.bindStatus === 'bound') {
+        const { data: partner } = await users.doc(user.partnerId).get()
+        if (!partner || partner.partnerId !== openid || partner.coupleId !== user.coupleId || partner.bindStatus !== 'bound') return { success: false, message: '绑定状态已变化，请重新进入' }
+        await users.doc(user.partnerId).update({ data: { kitchenName: kitchenName.trim() } })
+      }
+      await users.doc(openid).update({ data: { kitchenName: kitchenName.trim() } })
+      return { success: true }
     })
-
-    // 如果已绑定伴侣，同步更新伴侣的厨房名称
-    if (currentUser.partnerId) {
-      await db.collection('User').doc(currentUser.partnerId).update({
-        data: { kitchenName }
-      }).catch(() => {})
-    }
-
-    console.log('update kitchen name success', currentOpenid, kitchenName)
-
-    return { success: true }
-  } catch (err) {
-    console.error('update kitchen name error', err)
-    return {
-      success: false,
-      message: '更新失败',
-      error: err.message
-    }
+    return result && Object.prototype.hasOwnProperty.call(result, 'result') ? result.result : result
+  } catch (error) {
+    console.error('update kitchen name error', error.message)
+    return { success: false, message: '更新失败，请重试' }
   }
 }

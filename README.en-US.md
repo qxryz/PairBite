@@ -1,271 +1,172 @@
-# PairBite - Couples' Little Kitchen
+# SheWant
 
-A WeChat Mini Program designed for couples to help them manage dishes together, decide on daily meals, and record their culinary life.
+SheWant is a modified version of [PairBite](https://github.com/630999Steven/PairBite), built incrementally on the WeChat Mini Program by **630999Steven**. This fork is [qxryz/PairBite](https://github.com/qxryz/PairBite). Original attribution and the [CC BY-NC-SA 4.0](LICENSE) license are retained.
 
-Based on WeChat Cloud Development (CloudBase), it requires zero servers and zero maintenance—ready to use out of the box. Once deployed, multiple couples can be invited to use it, with data automatically isolated between pairs.
+Two people share a menu of food, memberships, and gifts. Select items or submit a wish to the other person, who can accept, reply, and mark it complete. The project does not process payments, purchase products, top up accounts, or redeem memberships.
 
-## Feature Overview
+[中文](README.md)
 
-- **Partner Binding**: Pair up via invitation codes with automatic two-way data synchronization.
-- **Dish Library Management**: Add/edit dishes with support for categories, images, and descriptions.
-- **Daily Ordering**: Select dishes from the library to place an "order" with notes; partners receive real-time notifications.
-- **Order History**: View all past orders with a "Reorder" feature for quick reuse.
-- **Category Management**: Customize dish categories (e.g., Meat, Vegetables, Soup, Staples) with sorting support.
-- **Subscription Notifications**: Automatically push WeChat subscription messages to partners after an order is placed.
-- **Kitchen Naming**: Customize the name of your little kitchen, synced for both users.
+## Features
 
-<p>
-  <img src="docs/images/c84c40c90154ea6fc2b2adffc075ce52.png" width="180" />
-  <img src="docs/images/ced1fa2bb3d78b4be40a7a57a82e0ed0.png" width="180" />
-  <img src="docs/images/7b068edcfe92965528ef43c1deda8aea.jpg" width="180" />
-  <img src="docs/images/6072e6da3beb9cac110266ec1c5d39bc.jpg" width="180" />
-</p>
-<p>
-  <img src="docs/images/ccd81f7db4ad334c1b7fb087730fe41d.jpg" width="180" />
-  <img src="docs/images/a8629d338411f06bd52ba37041055e21.jpg" width="180" />
-  <img src="docs/images/026c99529da996b13d8ee25a6ae43887.jpg" width="180" />
-  <img src="docs/images/0e23519901d16165b4380d1ac6e40f0e.jpg" width="180" />
-</p>
+- Retains PairBite's invitation codes, partner binding, shared menu, categories, recipe editing, order history, completion photos, and shop naming.
+- Adds food, membership, and gift product types, with specifications for memberships and gifts.
+- Supports menu orders with notes and a requested date, or a separate wish with a reference link.
+- Filters orders by all, created by me, or received. Recipients handle orders; creators can cancel pending orders.
+- Provides a local demo when no cloud environment is configured, with requester and recipient identities.
+- Can attempt WeChat subscription notifications after real templates are configured.
 
-## Tech Stack
+## Run locally
 
-| Layer | Technology | Description |
-|---|------|------|
-| Frontend | WeChat Mini Program Native | WXML + WXSS + JS |
-| UI | WeUI | Official WeChat component library |
-| Backend | WeChat Cloud Functions | Node.js + wx-server-sdk |
-| Database | WeChat Cloud Database | NoSQL Document Database |
-| Storage | WeChat Cloud Storage | Dish images |
-| Notification | WeChat Subscription Messages | Order/New Dish notifications |
+1. Clone this fork:
 
-No third-party API dependencies; runs entirely within the WeChat Cloud Development ecosystem.
+   ```bash
+   git clone https://github.com/qxryz/PairBite.git
+   cd PairBite
+   ```
 
-## Project Structure
+2. Import the **repository root** into [WeChat DevTools](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html). `project.config.json` points to `miniprogram/` for the Mini Program and `cloudfunctions/` for cloud functions.
+3. Install the Mini Program's WeUI dependency:
 
-```
-├── miniprogram/                # Frontend
-│   ├── app.js                  # Global logic (User mgmt, bind guard, cloud init)
-│   ├── app.json                # Page routing and TabBar config
-│   ├── app.wxss                # Global styles
-│   ├── envList.js              # Cloud environment config ← Modify this
-│   ├── components/
-│   │   └── bind-guard/         # Binding status reminder component
-│   └── pages/
-│       ├── MainPage/           # Home (Couple card, today's order, shortcuts)
-│       ├── Order/              # Ordering page (Category selection, cart)
-│       ├── Dishes/             # Dish library browsing
-│       ├── DishAdd/            # Add/Edit dish
-│       ├── DishDetail/         # Dish details
-│       ├── OrderHistory/       # Order history
-│       ├── OrderDetail/        # Order details
-│       ├── Bind/               # Partner binding
-│       ├── Settings/           # Personal settings
-│       └── CategoryManage/     # Category management
-├── cloudfunctions/             # Backend (Cloud Functions)
-│   ├── createUser/             # User registration/login, generate invitation code
-│   ├── bindPartner/            # Partner pairing
-│   ├── unbindPartner/          # Unbinding
-│   ├── getCoupleData/          # Query shared couple data
-│   ├── updateCoupleData/       # Update/Delete shared data
-│   ├── manageCategory/         # Category management (CRUD + default init)
-│   ├── updateKitchenName/      # Update kitchen name
-│   ├── sendNotify/             # Send subscription notification
-│   └── getOpenId/              # Get user OpenID
-├── project.config.json         # WeChat DevTools config ← Modify this
-└── LICENSE
-```
+   ```bash
+   npm ci --prefix miniprogram
+   ```
 
-## Deployment Guide
+4. Select **Tools → Build npm** in WeChat DevTools, then compile. The generated `miniprogram/miniprogram_npm/` directory is excluded from source control.
+5. Leave `envId` empty in `miniprogram/envList.js` to use the local demo. In Settings, switch between the requester and recipient to try creating, accepting, and completing orders.
 
-### Prerequisites
+The demo uses the cloud function data protocol with `requester` and `receiver` identities. Data stays in the current tool or device's local storage. It does not provide real WeChat binding, cross-device synchronization, or subscription notifications. Once a cloud environment is configured, failed cloud calls show errors and do not fall back to sample data.
 
-- Install [WeChat DevTools](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html).
-- Register a WeChat Mini Program account ([Personal account is fine, choose "Other" for category](https://mp.weixin.qq.com/wxopen/waregister?action=step1&source=mpregister&token=&lang=zh_CN)).
-- In the Mini Program backend, complete the "Mini Program Information" and "Mini Program Category" sections (choose Tools -> Notepad as the primary category).
+This is a native WeChat Mini Program, opened through WeChat DevTools. There is no React website or web development server.
 
-### Step 1: Clone Project
+## Deploy to WeChat Cloud Development
 
-```bash
-git clone https://github.com/630999Steven/PairBite.git
-```
+Real use by two people requires your own Mini Program AppID, cloud environment, and access to a trial or released version. Check your cloud console for current quotas, plans, and pricing.
 
-### Step 2: Enable Cloud Development
+### 1. Configure the AppID and environment
 
-1. After registering, get your Mini Program AppID from the developer backend.
+- Set your AppID in `project.config.json`.
+- Enable or select the matching cloud environment in WeChat DevTools.
+- Set `envId` in `miniprogram/envList.js`, preserving the file's export structure.
 
-   ![image-20260426183947448](docs/images/image-20260426183947448.png)
+The AppID and cloud environment must match. A local demo cannot confirm cross-device synchronization or message delivery without a real AppID and environment.
 
-2. Open the project with WeChat DevTools.
+### 2. Create the collections and set permissions
 
-   ![image-20260426184308726](docs/images/image-20260426184308726.png)
+Keep the original four collections and data model:
 
-3. Click the "Cloud Development" (云开发) button in the toolbar.
+| Collection | Purpose |
+| --- | --- |
+| `User` | Users, invitation codes, and binding relationships |
+| `DishList` | Shared products and recipes, extended with `type` and `spec` |
+| `OrderList` | Product snapshots, wishes, creators, recipients, and status |
+| `Category` | Shared categories |
 
-   ![image-20260426184749860](docs/images/image-20260426184749860.png)
-
-4. Follow the prompts to enable the cloud environment (Free basic plan is sufficient).
-
-5. Note down your **Cloud Environment ID** (e.g., `cloud1-xxxxxxxxxx`).
-
-   ![image-20260426184949404](docs/images/image-20260426184949404.png)
-
-### Step 3: Add Collections
-
-In the Cloud Development platform, go to the Database and add four collections:
-
-1. **User**
-2. **DishList**
-3. **OrderList**
-4. **Category**
-
-![image-20260426203835555](docs/images/image-20260426203835555.png)
-
-### Step 4: Update Configuration
-
-Modify the following two files:
-
-**project.config.json** — Replace with your AppID:
+Apply the following custom security rule to **each** collection to deny direct Mini Program client access:
 
 ```json
-"appid": "YOUR_APP_ID"
+{
+  "read": false,
+  "write": false
+}
 ```
 
-> Find your AppID in [WeChat Official Accounts Platform](https://mp.weixin.qq.com/) → Development Management → Development Settings.
+Cloud functions handle data access. Shared queries and mutations check the authenticated user, reciprocal binding, and `coupleId`. Products are created through `updateCoupleData` with action `add`; orders are created on the server through `manageOrder`. Do not open client access to work around a permission error.
 
-![image-20260426193206076](docs/images/image-20260426193206076.png)
+Legacy products without `type` are treated as food; legacy orders without `status` display as pending. Back up existing data and verify it in your own test environment before deployment.
 
-**miniprogram/envList.js** — Replace with your Cloud Environment ID:
+### 3. Deploy every cloud function
 
-```javascript
-const envList = [
-  {
-    "envId": "YOUR_CLOUD_ENV_ID",
-    "alias": "cloud"
-  }
-]
+Select the cloud environment in WeChat DevTools. For each function below, choose **Upload and Deploy: Install dependencies on cloud (do not upload node_modules)**. The original 10 functions remain, with `manageOrder` added, for 11 functions in total:
+
+| Function | Purpose |
+| --- | --- |
+| `createUser` | Login and profiles |
+| `bindPartner` | Invitation-code binding |
+| `unbindPartner` | Unbinding |
+| `getCoupleData` | Shared data queries |
+| `updateCoupleData` | Product creation and allowed shared updates/deletions |
+| `manageCategory` | Categories |
+| `updateKitchenName` | Shop naming |
+| `sendNotify` | Subscription notifications |
+| `getOpenId` | Current user's OpenID |
+| `getFileURL` | Temporary cloud file URLs |
+| `manageOrder` | Order creation and status transitions |
+
+The server creates product snapshots from the current binding and product records. Submitting the same request ID again does not create a duplicate order. The client cannot choose the creator, recipient, `coupleId`, or initial status.
+
+### 4. Configure subscription messages (optional)
+
+Add actual templates available to your Mini Program in the [WeChat platform](https://mp.weixin.qq.com/). Set the actual template IDs in `notifyTmplIds` in `miniprogram/envList.js`, then configure these environment variables for `sendNotify`:
+
+| Variable | Purpose |
+| --- | --- |
+| `NOTIFY_TEMPLATE_ID` | New order and product template ID |
+| `ORDER_STATUS_TEMPLATE_ID` | Status template ID; defaults to the preceding ID |
+| `NOTIFY_TEMPLATE_FIELDS` | JSON string mapping semantic names to template fields |
+| `ORDER_STATUS_TEMPLATE_FIELDS` | Status field mapping; defaults to the preceding mapping |
+
+Example mapping:
+
+```json
+{"time":"time25","title":"thing31","content":"thing2","remark":"thing11"}
 ```
 
-![image-20260426193349260](docs/images/image-20260426193349260.png)
+These example fields came from the original template. Replace them with your actual template field IDs and types. The client authorization template IDs must match those used by the cloud function. Placeholder IDs do not work.
 
-### Step 5: Upload Cloud Functions
+The recipient must authorize the template and have available subscription quota. Missing templates skip sending. A send failure does not undo a created order or status update. Each notification state is attempted at most once per order; delivery is not guaranteed and is not automatically retried.
 
-In WeChat DevTools:
+### 5. Verify with two people and publish
 
-1. Select your environment.
+Configure trial membership and version access according to the current WeChat platform requirements. Two real users should set profiles and bind through an invitation code, then verify:
 
-   ![image-20260426202731252](docs/images/image-20260426202731252.png)
+1. One user adds food, a membership, or a gift; the other can refresh and view it.
+2. One user creates a menu order or a wish; the other can view the received order.
+3. The recipient accepts, replies, and completes the order; the creator sees the status changes.
+4. Creators can only cancel pending orders, and users cannot access another pair's data.
+5. If notifications are enabled, verify authorization, template fields, and actual delivery.
 
-2. For each cloud function in `cloudfunctions/`, right-click and select → "Upload and Deploy: Install dependencies on cloud (do not upload node_modules)".
+## Order status
 
-There are 10 cloud functions to deploy:
+| Status | Available actions |
+| --- | --- |
+| `pending` | Recipient accepts; creator cancels |
+| `accepted` | Recipient marks complete |
+| `completed` | View the record |
+| `cancelled` | View the record |
 
-| Cloud Function | Purpose |
-|--------|------|
-| createUser | User registration/login |
-| bindPartner | Partner binding |
-| unbindPartner | Unbind partner |
-| getCoupleData | Query shared data |
-| updateCoupleData | Update shared data |
-| manageCategory | Category management |
-| updateKitchenName | Kitchen naming |
-| sendNotify | Message notifications |
-| getOpenId | Get OpenID |
-| getFileURL | Convert file ID to temporary link |
+These statuses record progress between two people. They do not confirm a payment, purchase, or account top-up.
 
-### Step 6: Configure Subscription Message Templates (Optional)
+## Structure
 
-For order notifications:
+```text
+miniprogram/
+  app.js / app.json / app.wxss   Global logic, routes, and styles
+  envList.js                    Cloud environment configuration
+  components/bind-guard/        Binding reminder
+  utils/                        Products, recipes, and local demo
+  pages/                        11 original pages and the new Wish page
+cloudfunctions/                 10 original functions and manageOrder
+scripts/check-miniprogram.js    Source checks
+tests/                          Local logic and permission tests
+project.config.json             WeChat DevTools project configuration
+LICENSE                         CC BY-NC-SA 4.0
+```
 
-1. Log in to [WeChat Official Accounts Platform](https://mp.weixin.qq.com/) → Basic Functions → Subscription Messages → Public Template Library.
+The original pages are `MainPage`, `Dishes`, `DishAdd`, `DishDetail`, `RecipeEdit`, `Order`, `OrderHistory`, `OrderDetail`, `Settings`, `Bind`, and `CategoryManage`.
 
-   I used "Schedule Reminder" (日程提醒) as the template:
+## Checks
 
-   ![image-20260426200324596](docs/images/image-20260426200324596.png)
+Using a Node.js version with `node:test` support, run from the repository root:
 
-2. Search for and select a template containing: Time, Task Name, Reminder Content, and Remarks. Add and submit.
+```bash
+npm run check
+npm test
+```
 
-   ![image-20260426200623299](docs/images/image-20260426200623299.png)
+The root scripts use only Node.js built-in modules. Static checks cover source JavaScript and JSON, page files, WXML tags, interpolation, directives and event handlers, local references, routes, and resource paths. They skip `node_modules` and generated `miniprogram_npm` files. Local checks do not replace WeChat DevTools compilation, device testing, or verification against a real cloud environment.
 
-3. Go to "My Templates," get the Template ID, and replace the value of `notifyTmplIds` in `miniprogram/app.js`.
+## Attribution and license
 
-> Core functionality will work without this; only push notifications will be disabled. See "FAQ" if messages aren't received.
+Original project: [630999Steven/PairBite](https://github.com/630999Steven/PairBite), by **630999Steven**. Modified version: [qxryz/PairBite](https://github.com/qxryz/PairBite).
 
-**Note**: If your template/fields differ from mine, you must manually replace each field's DATA ID in the code.
-
-### Step 7: Invite Experience Members (Required)
-
-Before the app is formally launched, other users must be added as **Experience Members** to access it:
-
-1. [WeChat Official Accounts Platform](https://mp.weixin.qq.com/) → Management → Member Management → Experience Members.
-2. Click "Add" and enter the other person's WeChat ID.
-3. Once the other person confirms in WeChat, they can scan the experience QR code.
-
-> Personal accounts can add up to 15 experience members, enough for several couples. Data is isolated by `coupleId`.
-
-### Step 8: Upload Code and Deploy
-
-1. Click "Upload" in the top right of WeChat DevTools to upload the code as an "Experience Version" (version number is arbitrary). **No official review/submission is required for this.**
-
-2. In Management -> Version Management, set it as the "Experience Version." Scan the QR code to enter (only members added in Step 7 can enter).
-
-   ![image-20260426202128523](docs/images/image-20260426202128523.png)
-
-## Usage Workflow
-
-1. **User A** opens the app → sets avatar/nickname → goes to "Bind" page to get an invitation code and sends it to User B.
-2. **User B** opens the app → sets avatar/nickname → enters User A's code to complete binding.
-3. Once bound, both share a dish library and can order food and view records.
-
-## Database Schema
-
-| Collection | Purpose | Data Isolation |
-|------|------|---------|
-| User | User info, binding relationships | openid |
-| DishList | Dish library | coupleId |
-| OrderList | Order records | coupleId |
-| Category | Dish categories | coupleId |
-
-Data is isolated by `coupleId`, so multiple couples can share one instance of the app without interference.
-
-## Cloud Development Free Tier
-
-| Resource | Free Limit |
-|------|---------|
-| Database Storage | 2 GB |
-| Database Reads | 500k / day |
-| Cloud Storage | 5 GB |
-| Cloud Function Calls | 400k / month |
-
-Daily use by a couple fits easily within the free tier.
-
-## FAQ
-
-**Q: Do I need two people to use it?**
-A: Yes, the dish and ordering features are unlocked only after binding a partner. Single users can only access settings and the binding page.
-
-**Q: How do I change my partner?**
-A: Unbind in the settings page, then bind again using a new invitation code. Previous data remains under the old `coupleId`.
-
-**Q: Cloud function deployment error?**
-A: Run `npm install` in the cloud function directory before uploading. If it still fails, ensure your Node.js version is $\ge$ 12.
-
-**Q: Not receiving subscription messages?**
-A: WeChat subscription authorization is for the **user themselves** to receive messages, not for the partner to send. Therefore, **both partners must authorize** to receive notifications from each other.
-
-Authorization prompts are triggered on the home page, upon submitting orders, after successful binding, and in order details. It is recommended to check "Always keep my choice" and click allow.
-
-**Q: Partner cannot see my uploaded images?**
-A: In the free tier, cloud storage permissions cannot be set to "Public Read." The project uses the `getFileURL` cloud function to convert `cloud://` file IDs into temporary links. These links expire in about 2 hours (the frontend refreshes them every 1.5 hours). If you stay on a page for a long time without refreshing, images may expire; simply refresh the page. If you have a paid plan, change cloud storage permissions to "Public Read" and switch to the `premium-storage-version` branch for a cleaner implementation.
-
-## Contribution
-
-Issues and Pull Requests are welcome.
-
-## License
-
-This project is open-sourced under the [CC BY-NC-SA 4.0](LICENSE) license.
-
-- Free to use, modify, and share.
-- **Commercial use is prohibited.**
-- Modified works must be shared under the same license.
-- Original authorship must be credited.
+This project remains under [CC BY-NC-SA 4.0](LICENSE): credit the original author, use it only for noncommercial purposes, and share adaptations under the same license. Exclude personal credentials, local configuration, generated files, and development notes before contributing.

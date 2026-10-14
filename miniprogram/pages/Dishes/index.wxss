@@ -49,6 +49,27 @@
   color: #333;
 }
 
+.type-filters {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.type-filter {
+  flex: 1;
+  padding: 16rpx 4rpx;
+  border-radius: 30rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #777;
+  background: white;
+}
+
+.type-filter.active {
+  color: #3C9E65;
+  background: #DFF3E5;
+}
+
 /* 空状态 */
 .empty-state {
   display: flex;
@@ -60,11 +81,6 @@
 .empty-image {
   width: 300rpx;
   height: 300rpx;
-  margin-bottom: 40rpx;
-}
-
-.empty-emoji {
-  font-size: 150rpx;
   margin-bottom: 40rpx;
 }
 
@@ -109,6 +125,29 @@
   width: 100%;
   height: 280rpx;
   background: #F5F9F0;
+}
+
+.dish-card-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 100rpx;
+}
+
+.dish-card-spec {
+  display: block;
+  font-size: 24rpx;
+  color: #777;
+  margin-bottom: 12rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dish-card-type {
+  margin-right: 16rpx;
+  color: #5AAE78;
+  font-size: 22rpx;
 }
 
 .dish-card-info {

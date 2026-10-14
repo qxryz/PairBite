@@ -4,8 +4,19 @@
     <image class="header-mascot" src="/images/123.jpg" mode="aspectFit"></image>
     <view class="header-info">
       <text class="header-title">{{appName}}</text>
-      <text class="header-subtitle" wx:if="{{isBound}}">和{{partnerName}}的专属小厨房</text>
+      <text class="header-subtitle" wx:if="{{isBound}}">与 {{partnerName}} 的心愿小店</text>
       <text class="header-subtitle" wx:else>快去绑定你的另一半吧</text>
+    </view>
+  </view>
+
+  <view class="settings-section" wx:if="{{isDemo}}">
+    <view class="section-title">本机体验</view>
+    <view class="settings-card demo-settings">
+      <text class="demo-caption">体验数据仅保存在当前设备</text>
+      <view class="demo-identity-row">
+        <button class="demo-identity {{demoIdentity === 'requester' ? 'selected' : ''}}" data-identity="requester" bindtap="switchDemoIdentity">下单方</button>
+        <button class="demo-identity {{demoIdentity === 'receiver' ? 'selected' : ''}}" data-identity="receiver" bindtap="switchDemoIdentity">接单方</button>
+      </view>
     </view>
   </view>
 
@@ -40,12 +51,12 @@
     <view class="settings-card">
       <view class="settings-item">
         <text class="item-icon">🍽️</text>
-        <text class="item-label">菜品总数</text>
-        <text class="item-value">{{dishCount}} 道</text>
+        <text class="item-label">商品总数</text>
+        <text class="item-value">{{dishCount}} 件</text>
       </view>
       <view class="settings-item">
         <text class="item-icon">📋</text>
-        <text class="item-label">点菜次数</text>
+        <text class="item-label">下单次数</text>
         <text class="item-value">{{orderCount}} 次</text>
       </view>
     </view>
@@ -57,7 +68,7 @@
     <view class="settings-card">
       <view class="settings-item" bindtap="requestNotifyPermission">
         <text class="item-icon">🔔</text>
-        <text class="item-label">订阅消息</text>
+        <text class="item-label">订单提醒</text>
         <text class="item-arrow">></text>
       </view>
     </view>
@@ -71,21 +82,13 @@
       <view class="settings-item">
         <text class="item-icon">📱</text>
         <text class="item-label">版本号</text>
-        <text class="item-value">v1.0.0</text>
+        <text class="item-value">v{{version}}</text>
       </view>
-      <button class="settings-item contact-btn" open-type="contact">
-        <text class="item-icon">💬</text>
-        <text class="item-label">联系作者</text>
-        <text class="item-arrow">></text>
-      </button>
+
     </view>
   </view>
 
-  <!-- 底部版权 -->
-  <view class="footer">
-    <text class="footer-text" wx:if="{{isBound}}">Made with 💚 for {{partnerName}}</text>
-    <text class="footer-text" wx:else>Made with 💚</text>
-  </view>
+  <view class="footer"><text class="footer-text">SheWant · 心愿小店</text></view>
 
   <!-- 编辑头像昵称弹窗 -->
   <view wx:if="{{showEditModal}}" class="modal-mask" catchtap="closeEditModal">

@@ -2,12 +2,24 @@
   <!-- 菜品图片 -->
   <view class="dish-image-wrapper">
     <image class="dish-image" wx:if="{{dish.imageUrl || previewImageUrl}}" src="{{dish.imageUrl || previewImageUrl}}" mode="widthFix"></image>
-    <image class="dish-image" wx:else src="/images/bba273d65e7e0a3ae9773c36c18acef1.jpg" mode="widthFix"></image>
+    <view class="dish-image dish-emoji" wx:elif="{{dish}}">{{dish.typeIcon}}</view>
   </view>
 
   <!-- 菜品信息卡片 -->
-  <view class="dish-info-card">
+  <view class="dish-info-card" wx:if="{{dish}}">
     <view class="dish-name">{{dish.name}}</view>
+
+    <view class="info-row">
+      <text class="info-icon">{{dish.typeIcon}}</text>
+      <text class="info-label">类型</text>
+      <text class="info-value">{{dish.typeLabel}}</text>
+    </view>
+
+    <view class="info-row" wx:if="{{dish.spec && dish.type !== 'food'}}">
+      <text class="info-icon">🏷️</text>
+      <text class="info-label">规格</text>
+      <text class="info-value">{{dish.spec}}</text>
+    </view>
 
     <view class="info-row">
       <text class="info-icon">👤</text>
@@ -21,15 +33,15 @@
       <text class="info-value">{{dateText}}</text>
     </view>
 
-    <view class="info-row" wx:if="{{dish.desc}}">
+    <view class="info-row" wx:if="{{dish.description}}">
       <text class="info-icon">📝</text>
-      <text class="info-label">备注</text>
-      <text class="info-value">{{dish.desc}}</text>
+      <text class="info-label">描述</text>
+      <text class="info-value" user-select>{{dish.description}}</text>
     </view>
   </view>
 
   <!-- 菜谱区 -->
-  <view class="recipe-card" wx:if="{{dish.ingredients || dish.steps}}">
+  <view class="recipe-card" wx:if="{{dish.type === 'food' && (dish.ingredients || dish.steps)}}">
     <view class="recipe-header">
       <view class="recipe-title-wrap">
         <text class="recipe-title">菜谱</text>
@@ -56,7 +68,7 @@
   </view>
 
   <!-- 没有菜谱：空状态卡片 -->
-  <view class="recipe-card recipe-empty-card" wx:else>
+  <view class="recipe-card recipe-empty-card" wx:elif="{{dish.type === 'food'}}">
     <view class="recipe-header">
       <view class="recipe-title-wrap">
         <text class="recipe-title">菜谱</text>
@@ -75,12 +87,12 @@
   </view>
 
   <!-- 操作按钮 -->
-  <view class="action-buttons">
+  <view class="action-buttons" wx:if="{{dish}}">
     <view class="btn-edit" bindtap="editDish">
-      <text>编辑菜品</text>
+      <text>编辑商品</text>
     </view>
     <view class="btn-delete" bindtap="deleteDish">
-      <text>删除菜品</text>
+      <text>删除商品</text>
     </view>
   </view>
 </view>

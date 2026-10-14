@@ -5,21 +5,25 @@
       <text class="header-date">{{order.dateText}}</text>
       <text class="header-time">{{order.timeText}}</text>
     </view>
-    <view class="header-creator">{{order.creatorName}}点的菜</view>
+    <view class="order-status"><text>{{order.statusText}}</text><text class="demo-badge" wx:if="{{order.isDemo}}">{{order.isSample ? '示例订单' : '体验订单'}}</text></view>
+    <view class="header-creator">{{order.creatorName}}下的订单</view>
   </view>
 
-  <!-- 菜品列表 -->
-  <view class="section">
+  <view class="section" wx:if="{{order.expectedDate}}"><view class="section-title"><text class="section-icon">📅</text><text>希望日期</text></view><text class="wish-description">{{order.expectedDate}}</text></view>
+  <view class="section" wx:if="{{order.wish}}"><view class="section-title"><text class="section-icon">💝</text><text>心愿</text></view><text class="wish-title">{{order.wish.title}}</text><text class="wish-description" wx:if="{{order.wish.description}}">{{order.wish.description}}</text><view class="wish-link" wx:if="{{order.wish.link}}" bindtap="copyWishLink"><text>{{order.wish.link}}</text><text>复制链接</text></view></view>
+
+  <!-- 商品列表 -->
+  <view class="section" wx:if="{{order.dishes.length > 0 && !order.wish}}">
     <view class="section-title">
       <text class="section-icon">🍽️</text>
-      <text>菜品清单</text>
-      <text class="dish-total">共{{order.dishes.length}}道</text>
+      <text>商品清单</text>
+      <text class="dish-total">共{{order.dishes.length}}件</text>
     </view>
     <view class="dish-list">
       <view class="dish-item" wx:for="{{order.dishes}}" wx:key="_id">
         <image class="dish-image" wx:if="{{item.imageUrl}}" src="{{item.imageUrl}}" mode="aspectFill"></image>
         <image class="dish-image" wx:else src="/images/1efe5aea4d976b0e8597d4ffd5c068bc.jpg" mode="aspectFill"></image>
-        <text class="dish-name">{{item.name}}</text>
+        <view class="dish-text"><text class="dish-name">{{item.name}}</text><text class="dish-spec" wx:if="{{item.spec}}">{{item.spec}}</text></view>
       </view>
     </view>
   </view>
@@ -35,17 +39,20 @@
     </view>
   </view>
 
-  <!-- 成品照片 -->
-  <view class="section photo-section">
+  <view class="section" wx:if="{{order.reply}}"><view class="section-title"><text class="section-icon">💬</text><text>回复</text></view><text class="wish-description">{{order.reply}}</text></view>
+  <view class="section order-actions" wx:if="{{canAccept || canComplete || canCancel}}"><textarea class="reply-input" wx:if="{{canAccept || canComplete}}" placeholder="回复（选填）" value="{{replyInput}}" maxlength="200" bindinput="onReplyInput"></textarea><view class="status-action" wx:if="{{canAccept}}" data-status="accepted" bindtap="updateStatus">{{updating ? '处理中…' : '接单'}}</view><view class="status-action" wx:if="{{canComplete}}" data-status="completed" bindtap="updateStatus">{{updating ? '处理中…' : '标记完成'}}</view><view class="status-action cancel" wx:if="{{canCancel}}" data-status="cancelled" bindtap="updateStatus">{{updating ? '处理中…' : '取消订单'}}</view></view>
+
+  <!-- 成果照片 -->
+  <view class="section photo-section" wx:if="{{isRecipient || order.finishedPhoto}}">
     <view class="section-title">
       <text class="section-icon">📸</text>
-      <text>成品照片</text>
-      <text class="photo-tip" wx:if="{{!order.finishedPhoto}}">记录美味时刻</text>
+      <text>成果照片</text>
+      <text class="photo-tip" wx:if="{{!order.finishedPhoto}}">上传成果照片</text>
     </view>
     <!-- 已有照片 -->
     <view class="photo-preview" wx:if="{{order.finishedPhoto}}">
       <image class="finished-photo" src="{{order.finishedPhoto}}" mode="aspectFill" bindtap="previewPhoto"></image>
-      <view class="photo-actions">
+      <view class="photo-actions" wx:if="{{isRecipient}}">
         <view class="photo-action-btn" bindtap="changePhoto">
           <text class="action-icon">🔄</text>
           <text>更换照片</text>
@@ -57,19 +64,21 @@
       </view>
     </view>
     <!-- 未上传照片 -->
-    <view class="photo-upload" wx:else bindtap="uploadPhoto">
+    <view class="photo-upload" wx:elif="{{isRecipient}}" bindtap="uploadPhoto">
       <view class="upload-icon">📷</view>
-      <text class="upload-text">拍一张做好的菜</text>
+      <text class="upload-text">添加成果照片</text>
       <text class="upload-hint">点击上传照片</text>
     </view>
   </view>
 
   <!-- 再来一单按钮 -->
-  <view class="reorder-btn" bindtap="reorder">
+  <view class="reorder-btn" wx:if="{{order.dishes.length > 0 && !order.wish}}" bindtap="reorder">
     <text class="reorder-icon">🔄</text>
     <text>再来一单</text>
   </view>
 </view>
+
+<view class="load-error" wx:if="{{loadError}}" bindtap="retryLoad"><text>{{loadError}} · 点击重试</text></view>
 
 <!-- 加载中 -->
 <view class="loading" wx:if="{{loading}}">

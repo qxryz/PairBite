@@ -1,0 +1,32 @@
+<view class="container">
+  <view class="page-header">
+    <text class="page-title">写个心愿</text>
+    <text class="page-subtitle">发给{{partnerName}}</text>
+  </view>
+  <view class="pending-notice" wx:if="{{pendingRequest}}" bindtap="retryPendingOrder">上次提交结果待确认 · {{submitting ? '确认中…' : '点击重试'}}</view>
+  <view class="wish-form">
+    <view class="field">
+      <text class="field-label">心愿名称 <text class="required">*</text></text>
+      <input class="field-input" value="{{title}}" bindinput="onTitleInput" maxlength="80" placeholder="想要什么" />
+    </view>
+    <view class="field">
+      <text class="field-label">类别</text>
+      <picker range="{{types}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange"><view class="field-picker">{{types[typeIndex].label}}<text>›</text></view></picker>
+    </view>
+    <view class="field">
+      <text class="field-label">描述（选填）</text>
+      <textarea class="field-input field-textarea" value="{{description}}" bindinput="onDescriptionInput" maxlength="500" placeholder="补充规格、口味或其他要求" />
+      <text class="field-count">{{description.length}}/500</text>
+    </view>
+    <view class="field">
+      <text class="field-label">参考链接（选填）</text>
+      <input class="field-input" value="{{link}}" bindinput="onLinkInput" maxlength="1000" placeholder="https://" />
+    </view>
+    <view class="field last-field">
+      <view class="date-label"><text class="field-label">希望日期（选填）</text><text class="clear-date" wx:if="{{expectedDate}}" bindtap="clearExpectedDate">清除</text></view>
+      <picker mode="date" start="{{today}}" value="{{expectedDate}}" bindchange="onExpectedDateChange"><view class="field-picker">{{expectedDate || '选择日期'}}<text>›</text></view></picker>
+    </view>
+  </view>
+  <view class="submit-button" bindtap="submitWish">{{submitting ? '提交中…' : '提交心愿'}}</view>
+</view>
+<bind-guard />

@@ -1,7 +1,7 @@
 <view class="container">
   <view class="page-header">
     <text class="page-title">类目管理</text>
-    <text class="page-subtitle">管理菜品分类</text>
+    <text class="page-subtitle">管理商品分类</text>
   </view>
 
   <!-- 分类列表 -->
@@ -10,6 +10,7 @@
       <view class="category-main" bindtap="editCategory" data-index="{{index}}">
         <text class="category-icon">{{item.icon}}</text>
         <text class="category-name">{{item.name}}</text>
+        <text class="category-type">{{item.typeLabel}}</text>
       </view>
       <view class="category-actions">
         <view class="action-btn move" wx:if="{{index > 0}}" catchtap="moveUp" data-index="{{index}}">↑</view>
@@ -37,6 +38,13 @@
   <view class="modal-mask" wx:if="{{showModal}}" catchtap="closeModal">
     <view class="modal-content" catchtap="preventBubble">
       <text class="modal-title">{{editingIndex >= 0 ? '编辑分类' : '添加分类'}}</text>
+
+      <view class="modal-field" wx:if="{{editingIndex < 0}}">
+        <text class="field-label">商品类型</text>
+        <view class="category-types">
+          <view class="category-type-option {{tempType === item.value ? 'active' : ''}}" wx:for="{{productTypes}}" wx:key="value" bindtap="onTypeChange" data-type="{{item.value}}">{{item.icon}} {{item.label}}</view>
+        </view>
+      </view>
 
       <view class="modal-field">
         <text class="field-label">图标</text>
@@ -69,8 +77,8 @@
   <!-- 删除转移弹窗 -->
   <view class="modal-mask" wx:if="{{showTransferModal}}" catchtap="closeTransferModal">
     <view class="modal-content" catchtap="preventBubble">
-      <text class="modal-title">转移菜品</text>
-      <text class="modal-desc">「{{deletingCategory.icon}} {{deletingCategory.name}}」下有 {{deletingDishCount}} 道菜品，请选择转移到的分类：</text>
+      <text class="modal-title">转移商品</text>
+      <text class="modal-desc">「{{deletingCategory.icon}} {{deletingCategory.name}}」下有 {{deletingDishCount}} 个商品，选择转移到的分类：</text>
 
       <view class="transfer-list">
         <view class="transfer-item {{transferTarget === item._id ? 'active' : ''}}"

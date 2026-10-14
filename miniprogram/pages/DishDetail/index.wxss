@@ -19,6 +19,8 @@
   align-items: center;
   justify-content: center;
   font-size: 200rpx;
+  height: 400rpx;
+  background: #E8F5E9;
 }
 
 /* 信息卡片 */
@@ -64,6 +66,8 @@
   flex: 1;
   font-size: 28rpx;
   color: #333;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 /* 操作按钮 */

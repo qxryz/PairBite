@@ -1,0 +1,18 @@
+.container { min-height: 100vh; padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); background: #F5F9F0; }
+.page-header { padding: 40rpx 30rpx; background: linear-gradient(135deg, #6FCF97 0%, #B8E6C1 100%); }
+.page-title { display: block; color: white; font-size: 44rpx; font-weight: 600; margin-bottom: 8rpx; }
+.page-subtitle { color: rgba(255,255,255,.9); font-size: 26rpx; }
+.wish-form { margin: 24rpx; padding: 30rpx; background: white; border-radius: 24rpx; box-shadow: 0 4rpx 20rpx rgba(124,179,66,.1); }
+.field { margin-bottom: 30rpx; }
+.last-field { margin-bottom: 0; }
+.field-label { display: block; font-size: 28rpx; color: #555; margin-bottom: 16rpx; }
+.required { color: #E57373; }
+.field-input, .field-picker { box-sizing: border-box; width: 100%; background: #F5F9F0; border-radius: 16rpx; padding: 22rpx; font-size: 28rpx; color: #333; }
+input.field-input { height: 88rpx; }
+.field-picker { display: flex; align-items: center; justify-content: space-between; color: #5EB77B; }
+.field-textarea { height: 200rpx; line-height: 1.6; }
+.field-count { display: block; text-align: right; color: #AAA; font-size: 22rpx; margin-top: 8rpx; }
+.date-label { display: flex; justify-content: space-between; }
+.clear-date { color: #999; font-size: 24rpx; }
+.submit-button { margin: 30rpx 24rpx; padding: 28rpx; text-align: center; color: white; font-size: 32rpx; font-weight: 500; border-radius: 50rpx; background: linear-gradient(135deg,#6FCF97 0%,#5AC476 100%); }
+.pending-notice { padding: 24rpx; background: #FFF9E6; color: #996600; font-size: 26rpx; text-align: center; }

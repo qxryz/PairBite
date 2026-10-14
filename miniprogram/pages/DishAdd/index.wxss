@@ -111,6 +111,39 @@
   margin-bottom: 30rpx;
 }
 
+.type-options {
+  display: flex;
+  gap: 16rpx;
+}
+
+.type-option {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 8rpx;
+  border: 2rpx solid #E8F5E9;
+  border-radius: 20rpx;
+  color: #777;
+  font-size: 28rpx;
+}
+
+.type-option.active {
+  color: #3C9E65;
+  background: #E8F5E9;
+  border-color: #6FCF97;
+}
+
+.description-field {
+  width: 100%;
+  min-height: 100rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #333;
+}
+
+.btn-disabled {
+  opacity: 0.6;
+}
+
 .input-label {
   display: flex;
   align-items: center;

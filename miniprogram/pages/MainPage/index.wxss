@@ -238,7 +238,7 @@
 
 .quick-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 20rpx;
   background: white;
   border-radius: 24rpx;
@@ -472,3 +472,5 @@
 .profile-tip-card .bind-tip-arrow {
   color: #66BB6A;
 }
+
+.demo-banner { display:flex; justify-content:space-between; gap:16rpx; padding:18rpx 24rpx; margin-bottom:20rpx; border-radius:16rpx; background:#E8F5E9; color:#43825B; font-size:24rpx; }

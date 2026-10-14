@@ -54,6 +54,32 @@
   color: #333;
 }
 
+.category-type {
+  font-size: 22rpx;
+  color: #6AA77D;
+  margin-left: 16rpx;
+}
+
+.category-types {
+  display: flex;
+  gap: 12rpx;
+}
+
+.category-type-option {
+  flex: 1;
+  padding: 18rpx 4rpx;
+  text-align: center;
+  border-radius: 16rpx;
+  background: #F5F5F5;
+  color: #777;
+  font-size: 26rpx;
+}
+
+.category-type-option.active {
+  color: #3C9E65;
+  background: #E8F5E9;
+}
+
 .category-actions {
   display: flex;
   align-items: center;

@@ -1,38 +1,26 @@
 const app = getApp()
+const { PRODUCT_TYPES, normalizeProduct } = require('../../utils/product.js')
 
 Page({
   data: {
-    isBound: false,
     dishes: [],
     filteredDishes: [],
     search: '',
     loading: true,
-    partnerName: '',
+    productTypes: PRODUCT_TYPES,
+    currentType: '',
   },
 
   onShow() {
     app.setKitchenTitle()
-    this.getPartnerName()
     this.loadDishes()
-  },
-
-  // 获取伴侣名字
-  async getPartnerName() {
-    try {
-      const res = await wx.cloud.callFunction({ name: 'getOpenId' })
-      const openid = res.result?.openid || ''
-      const partnerName = app.getPartnerName(openid)
-      this.setData({ partnerName })
-    } catch (e) {
-      console.error('获取伴侣名字失败', e)
-    }
   },
 
   // 加载菜品列表
   async loadDishes() {
     this.setData({ loading: true })
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await app.callFunction({
         name: 'getCoupleData',
         data: {
           collection: app.globalData.collectionDishList,
@@ -45,17 +33,17 @@ Page({
         throw new Error(res.result?.message || '加载失败')
       }
 
-      let dishes = res.result.data.map(item => ({
-        ...item,
+      const dishes = res.result.data.map(item => ({
+        ...normalizeProduct(item),
         createTimeText: this.formatDate(item.createTime)
       }))
       await app.convertFileURLs(dishes, ['imageUrl'])
 
       this.setData({
         dishes,
-        filteredDishes: dishes,
         loading: false
       })
+      this.filterDishes()
     } catch (e) {
       console.error('加载菜品失败', e)
       this.setData({ loading: false })
@@ -70,16 +58,21 @@ Page({
     this.filterDishes()
   },
 
+  onTypeChange(e) {
+    this.setData({ currentType: e.currentTarget.dataset.type })
+    this.filterDishes()
+  },
+
   // 过滤菜品
   filterDishes() {
-    const { dishes, search } = this.data
-    if (!search) {
-      this.setData({ filteredDishes: dishes })
-      return
-    }
-    const filtered = dishes.filter(item =>
-      item.name.toLowerCase().includes(search.toLowerCase())
-    )
+    const { dishes, search, currentType } = this.data
+    const keyword = search.toLowerCase()
+    const filtered = dishes.filter(item => {
+      if (currentType && item.type !== currentType) return false
+      return [item.name, item.description, item.spec].some(value =>
+        String(value || '').toLowerCase().includes(keyword)
+      )
+    })
     this.setData({ filteredDishes: filtered })
   },
 
@@ -102,7 +95,7 @@ Page({
     const dish = this.data.dishes.find(item => item._id === id)
 
     wx.showModal({
-      title: '删除菜品',
+      title: '删除商品',
       content: `确定要删除「${dish.name}」吗？`,
       confirmColor: '#E53935',
       success: async (res) => {
@@ -117,7 +110,7 @@ Page({
   async deleteDish(id) {
     wx.showLoading({ title: '删除中...', mask: true })
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await app.callFunction({
         name: 'updateCoupleData',
         data: {
           collection: app.globalData.collectionDishList,

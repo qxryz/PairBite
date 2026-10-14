@@ -1,4 +1,5 @@
 const app = getApp()
+const { createOrder, getPendingRequest } = require('./order-request')
 
 Page({
   data: {
@@ -15,6 +16,10 @@ Page({
     selectedCount: 0,
     selectedDishes: [],
     loading: true,
+    loadError: '',
+    pendingRequest: false,
+    expectedDate: '',
+    today: '',
     showSuccess: false,
     showRemarkModal: false,
     showCartPanel: false,
@@ -25,15 +30,23 @@ Page({
     remark: '',
     submitting: false,
     partnerName: '对方',
-    categoryTops: [],
     searchKey: '',
   },
 
   async onShow() {
     app.setKitchenTitle()
-    this.loadPartnerName()
+    await this.loadPartnerName()
     await app.loadCategories()
-    this.loadDishes()
+    try {
+      this.setData({ pendingRequest: !!getPendingRequest(app), today: this.getToday() })
+    } catch (error) {
+      wx.showToast({ title: error.message, icon: 'none' })
+    }
+    await this.loadDishes()
+  },
+
+  onUnload() {
+    if (this._scrollTimer) clearTimeout(this._scrollTimer)
   },
 
   // 获取伴侣名字
@@ -45,9 +58,10 @@ Page({
 
   // 加载菜品
   async loadDishes() {
-    this.setData({ loading: true })
+    this.setData({ loading: true, loadError: '' })
     try {
-      const res = await wx.cloud.callFunction({
+      if (!(app.globalData.categories || []).length) await app.loadCategories(true)
+      const res = await app.callFunction({
         name: 'getCoupleData',
         data: {
           collection: app.globalData.collectionDishList,
@@ -65,55 +79,25 @@ Page({
       const reorderIds = app.globalData.reorderDishIds ? app.globalData.reorderDishIds.split(',') : []
       app.globalData.reorderDishIds = null
 
+      const selectedIds = this.data.allDishes.filter(item => item.selected).map(item => item._id)
       const dishes = data.map(item => ({
         ...item,
-        selected: reorderIds.includes(item._id),
+        selected: (reorderIds.length ? reorderIds : selectedIds).includes(item._id),
         category: item.category || 'meat'
       }))
       await app.convertFileURLs(dishes, ['imageUrl'])
 
       const categories = app.globalData.categories || []
-      if (categories.length === 0) {
-        console.warn('分类数据为空，请检查 manageCategory 云函数')
-        this.setData({ dishes, allDishes: dishes, loading: false })
-        return
-      }
-
-      const dishesByCategory = {}
-      const categoryCount = {}
-      const selectedByCategory = {}
-
-      categories.forEach(cat => {
-        dishesByCategory[cat._id] = dishes.filter(d => d.category === cat._id)
-        categoryCount[cat._id] = dishesByCategory[cat._id].length
-        selectedByCategory[cat._id] = dishes.filter(d => d.category === cat._id && d.selected).length
-      })
-
-      const selectedDishes = dishes.filter(d => d.selected)
-
-      // 找到第一个有菜品的分类
-      const firstCategory = categories.find(cat => categoryCount[cat._id] > 0)
-
-      this.setData({
-        dishes,
-        allDishes: dishes,
-        categories,
-        dishesByCategory,
-        categoryCount,
-        selectedByCategory,
-        selectedDishes,
-        selectedCount: selectedDishes.length,
-        currentCategory: firstCategory ? firstCategory._id : categories[0]._id,
-        loading: false,
-        searchKey: ''
-      })
+      if (dishes.length && !categories.length) throw new Error('分类加载失败')
+      this.setData({ categories, loading: false, searchKey: '' })
+      this.refreshDishView(dishes, '')
 
       if (reorderIds.length > 0) {
-        wx.showToast({ title: '已选好菜品~', icon: 'none' })
+        wx.showToast({ title: this.data.selectedCount ? '已选好仍在菜单的商品' : '原订单商品已下架，请重新选择', icon: 'none' })
       }
     } catch (e) {
       console.error('加载菜品失败', e)
-      this.setData({ loading: false })
+      this.setData({ loading: false, loadError: '商品加载失败，点击重试' })
     }
   },
 
@@ -140,33 +124,28 @@ Page({
     this.filterDishes('')
   },
 
-  // 过滤菜品
+  // 搜索和购物车共同使用完整商品列表，筛选不会清除已选商品。
   filterDishes(searchKey) {
-    const { allDishes, categories } = this.data
-    let dishes = allDishes
+    this.refreshDishView(this.data.allDishes, searchKey)
+  },
 
-    if (searchKey) {
-      dishes = allDishes.filter(d => d.name.includes(searchKey) || (d.description && d.description.includes(searchKey)))
-    }
-
+  refreshDishView(allDishes, searchKey = this.data.searchKey) {
+    const dishes = searchKey ? allDishes.filter(d => (d.name || '').includes(searchKey) || (d.description || '').includes(searchKey)) : allDishes
+    const categories = this.data.categories
     const dishesByCategory = {}
     const categoryCount = {}
     const selectedByCategory = {}
-
     categories.forEach(cat => {
       dishesByCategory[cat._id] = dishes.filter(d => d.category === cat._id)
       categoryCount[cat._id] = dishesByCategory[cat._id].length
-      selectedByCategory[cat._id] = dishes.filter(d => d.category === cat._id && d.selected).length
+      selectedByCategory[cat._id] = allDishes.filter(d => d.category === cat._id && d.selected).length
     })
-
     const firstCategory = categories.find(cat => categoryCount[cat._id] > 0)
-
+    const selectedDishes = allDishes.filter(d => d.selected)
     this.setData({
-      dishes,
-      dishesByCategory,
-      categoryCount,
-      selectedByCategory,
-      currentCategory: firstCategory ? firstCategory._id : categories[0]._id
+      allDishes, dishes, dishesByCategory, categoryCount, selectedByCategory,
+      selectedDishes, selectedCount: selectedDishes.length,
+      currentCategory: firstCategory ? firstCategory._id : (categories[0] ? categories[0]._id : '')
     })
   },
 
@@ -206,33 +185,15 @@ Page({
     })
   },
 
-  // 切换选中状态
+  // 每件商品只选择一次。
   toggleSelect(e) {
     const id = e.currentTarget.dataset.id
-    const dishes = this.data.dishes.map(item => {
-      if (item._id === id) {
-        return { ...item, selected: !item.selected }
-      }
-      return item
-    })
-
-    // 重新按分类整理
-    const dishesByCategory = {}
-    const selectedByCategory = {}
-    this.data.categories.forEach(cat => {
-      dishesByCategory[cat._id] = dishes.filter(d => d.category === cat._id)
-      selectedByCategory[cat._id] = dishes.filter(d => d.category === cat._id && d.selected).length
-    })
-
-    const selectedDishes = dishes.filter(item => item.selected)
-
-    this.setData({
-      dishes,
-      dishesByCategory,
-      selectedByCategory,
-      selectedDishes,
-      selectedCount: selectedDishes.length
-    })
+    const item = this.data.allDishes.find(dish => dish._id === id)
+    if (item && !item.selected && this.data.selectedCount >= 30) {
+      wx.showToast({ title: '每单最多选择30件商品', icon: 'none' })
+      return
+    }
+    this.refreshDishView(this.data.allDishes.map(item => item._id === id ? { ...item, selected: !item.selected } : item))
   },
 
   // 切换购物车面板
@@ -283,100 +244,48 @@ Page({
     }
   },
 
-  // 详情面板中切换选中状态
+  // 详情和购物车同步更新原商品选择状态。
   toggleDishInDetail() {
-    const { currentDish } = this.data
-    if (!currentDish) return
-
-    const dishes = this.data.dishes.map(item => {
-      if (item._id === currentDish._id) {
-        return { ...item, selected: !item.selected }
-      }
-      return item
-    })
-
-    const dishesByCategory = {}
-    const selectedByCategory = {}
-    this.data.categories.forEach(cat => {
-      dishesByCategory[cat._id] = dishes.filter(d => d.category === cat._id)
-      selectedByCategory[cat._id] = dishes.filter(d => d.category === cat._id && d.selected).length
-    })
-
-    const selectedDishes = dishes.filter(item => item.selected)
-    const updatedDish = dishes.find(d => d._id === currentDish._id)
-
-    this.setData({
-      dishes,
-      dishesByCategory,
-      selectedByCategory,
-      selectedDishes,
-      selectedCount: selectedDishes.length,
-      currentDish: updatedDish
-    })
+    if (!this.data.currentDish) return
+    const id = this.data.currentDish._id
+    this.toggleSelect({ currentTarget: { dataset: { id } } })
+    this.setData({ currentDish: this.data.allDishes.find(item => item._id === id) })
   },
 
-  // 从购物车移除
   removeFromCart(e) {
     const id = e.currentTarget.dataset.id
-    const dishes = this.data.dishes.map(item => {
-      if (item._id === id) {
-        return { ...item, selected: false }
-      }
-      return item
-    })
-
-    const dishesByCategory = {}
-    const selectedByCategory = {}
-    this.data.categories.forEach(cat => {
-      dishesByCategory[cat._id] = dishes.filter(d => d.category === cat._id)
-      selectedByCategory[cat._id] = dishes.filter(d => d.category === cat._id && d.selected).length
-    })
-
-    const selectedDishes = dishes.filter(item => item.selected)
-
-    this.setData({
-      dishes,
-      dishesByCategory,
-      selectedByCategory,
-      selectedDishes,
-      selectedCount: selectedDishes.length
-    })
+    this.refreshDishView(this.data.allDishes.map(item => item._id === id ? { ...item, selected: false } : item))
   },
 
-  // 清空购物车
   clearCart() {
-    const dishes = this.data.dishes.map(item => ({ ...item, selected: false }))
-
-    const dishesByCategory = {}
-    const selectedByCategory = {}
-    this.data.categories.forEach(cat => {
-      dishesByCategory[cat._id] = dishes.filter(d => d.category === cat._id)
-      selectedByCategory[cat._id] = 0
-    })
-
-    this.setData({
-      dishes,
-      dishesByCategory,
-      selectedByCategory,
-      selectedDishes: [],
-      selectedCount: 0,
-      showCartPanel: false
-    })
+    this.refreshDishView(this.data.allDishes.map(item => ({ ...item, selected: false })))
+    this.setData({ showCartPanel: false })
   },
 
-  // 提交点菜 - 先弹出备注输入框
   submitOrder() {
-    const { selectedDishes, submitting } = this.data
-
-    if (submitting || selectedDishes.length === 0) {
-      if (selectedDishes.length === 0) {
-        wx.showToast({ title: '请先选择菜品', icon: 'none' })
-      }
+    if (this.data.submitting) return
+    if (!this.data.selectedDishes.length) {
+      wx.showToast({ title: '请先选择商品', icon: 'none' })
       return
     }
+    this.setData({ showRemarkModal: true })
+  },
 
-    // 弹出备注输入框
-    this.setData({ showRemarkModal: true, remark: '' })
+  getToday() {
+    const date = new Date()
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  },
+
+  onExpectedDateChange(e) {
+    this.setData({ expectedDate: e.detail.value })
+  },
+
+  clearExpectedDate() {
+    this.setData({ expectedDate: '' })
+  },
+
+  goToWish() {
+    wx.navigateTo({ url: '/pages/Wish/index' })
   },
 
   // 输入备注
@@ -395,130 +304,54 @@ Page({
   // 阻止冒泡
   preventClose() {},
 
-  // 跳过备注
   skipRemark() {
-    this.setData({ showRemarkModal: false })
-    wx.requestSubscribeMessage({
-      tmplIds: app.globalData.notifyTmplIds,
-      complete: () => this.doSubmitOrder('')
-    })
+    return this.doSubmitOrder('')
   },
 
-  // 确认备注
   confirmRemark() {
-    this.setData({ showRemarkModal: false })
-    wx.requestSubscribeMessage({
-      tmplIds: app.globalData.notifyTmplIds,
-      complete: () => this.doSubmitOrder(this.data.remark)
-    })
+    return this.doSubmitOrder(this.data.remark)
   },
 
-  // 实际提交点菜
-  async doSubmitOrder(remark) {
+  retryPendingOrder() {
+    return this.doSubmitOrder(this.data.remark, true)
+  },
+
+  async doSubmitOrder(remark, retry = false) {
+    if (this.data.submitting) return
     if (!app.isBound()) {
       wx.showToast({ title: '请先绑定伴侣', icon: 'none' })
       return
     }
-
-    const { selectedDishes } = this.data
-
     this.setData({ submitting: true })
-    wx.showLoading({ title: '提交中...', mask: true })
-
     try {
-      const db = await app.database()
-
-      // 保存点菜记录（带上 coupleId）
-      const coupleId = app.globalData.currentUser?.coupleId || ''
-      const addRes = await db.collection(app.globalData.collectionOrderList).add({
-        data: {
-          dishes: selectedDishes.map(item => ({
-            _id: item._id,
-            name: item.name,
-            imageUrl: item._raw_imageUrl || item.imageUrl || '',
-            category: item.category
-          })),
-          remark,
-          coupleId,
-          createTime: db.serverDate(),
-        }
-      })
-      const orderId = addRes._id
-
-      // 更新菜品点单次数（异步执行，不阻塞）
-      for (const dish of selectedDishes) {
-        wx.cloud.callFunction({
-          name: 'updateCoupleData',
-          data: {
-            collection: app.globalData.collectionDishList,
-            docId: dish._id,
-            action: 'inc',
-            data: { orderCount: 1 }
-          }
-        }).catch(() => {})
+      const pending = retry ? getPendingRequest(app) : null
+      if (retry && !pending) {
+        this.setData({ pendingRequest: false })
+        return
       }
-
-      // 发送通知
-      await this.sendNotification(selectedDishes, remark, orderId)
-
-      wx.hideLoading()
-      // 显示成功弹窗
-      this.setData({
-        showSuccess: true,
-        submitting: false
-      })
-
-    } catch (e) {
-      wx.hideLoading()
-      console.error('点菜失败', e)
-      wx.showToast({ title: '点菜失败，请重试', icon: 'none' })
+      const payload = pending ? pending.payload : {
+        dishIds: this.data.selectedDishes.map(item => item._id),
+        remark,
+        expectedDate: this.data.expectedDate
+      }
+      const result = await createOrder(app, payload)
+      if (!result) return
+      this.setData({ showSuccess: true, showRemarkModal: false, showCartPanel: false, pendingRequest: false })
+    } catch (error) {
+      console.error('点单失败', error)
+      let pendingRequest = true
+      try { pendingRequest = !!getPendingRequest(app) } catch (readError) {}
+      this.setData({ pendingRequest })
+      wx.showToast({ title: error.message || '提交未确认，请重试', icon: 'none' })
+    } finally {
       this.setData({ submitting: false })
-    }
-  },
-
-  // 发送通知
-  async sendNotification(dishes, remark, orderId) {
-    const dishNames = dishes.map(d => d.name).join('、')
-    try {
-      await wx.cloud.callFunction({
-        name: 'sendNotify',
-        data: {
-          type: 'newOrder',
-          templateId: app.globalData.notifyTmplIds[0],
-          dishNames,
-          count: dishes.length,
-          remark,
-          orderId
-        }
-      })
-    } catch (e) {
-      console.log('通知发送失败（可忽略）', e)
     }
   },
 
   // 关闭成功弹窗
   closeSuccess() {
-    // 重置选择状态
-    const dishes = this.data.dishes.map(item => ({
-      ...item,
-      selected: false
-    }))
-
-    const dishesByCategory = {}
-    const selectedByCategory = {}
-    this.data.categories.forEach(cat => {
-      dishesByCategory[cat._id] = dishes.filter(d => d.category === cat._id)
-      selectedByCategory[cat._id] = 0
-    })
-
-    this.setData({
-      showSuccess: false,
-      dishes,
-      dishesByCategory,
-      selectedByCategory,
-      selectedDishes: [],
-      selectedCount: 0
-    })
+    this.refreshDishView(this.data.allDishes.map(item => ({ ...item, selected: false })))
+    this.setData({ showSuccess: false, remark: '', expectedDate: '' })
   },
 
   // 跳转到菜品库

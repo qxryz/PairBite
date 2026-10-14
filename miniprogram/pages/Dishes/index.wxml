@@ -1,34 +1,40 @@
 <view class="container">
   <!-- 页面头部 -->
   <view class="page-header">
-    <text class="page-title">菜品库</text>
-    <text class="page-subtitle">和{{partnerName}}一起管理你们的菜单 ~</text>
+    <text class="page-title">商品库</text>
+    <text class="page-subtitle">管理菜品、会员和小礼物</text>
   </view>
 
   <!-- 搜索框 -->
   <view class="search-section">
     <view class="search-bar">
       <text class="search-icon">🔍</text>
-      <input class="search-input" placeholder="搜索菜品..." bindinput="onSearch" value="{{search}}" />
+      <input class="search-input" placeholder="搜索商品" bindinput="onSearch" value="{{search}}" />
+    </view>
+    <view class="type-filters">
+      <view class="type-filter {{!currentType ? 'active' : ''}}" data-type="" bindtap="onTypeChange">全部</view>
+      <view class="type-filter {{currentType === item.value ? 'active' : ''}}" wx:for="{{productTypes}}" wx:key="value" data-type="{{item.value}}" bindtap="onTypeChange">{{item.icon}} {{item.label}}</view>
     </view>
   </view>
 
   <!-- 空状态 -->
   <view class="empty-state" wx:if="{{dishes.length === 0 && !loading}}">
     <image class="empty-image" src="/images/bba273d65e7e0a3ae9773c36c18acef1.jpg" mode="aspectFit"></image>
-    <text class="empty-title">菜品库空空如也</text>
-    <text class="empty-desc">快添加你们喜欢的菜品吧！</text>
-    <view class="btn-primary" bindtap="toAddPage">添加第一道菜</view>
+    <text class="empty-title">还没有商品</text>
+    <text class="empty-desc">添加菜品、会员或小礼物</text>
+    <view class="btn-primary" bindtap="toAddPage">添加商品</view>
   </view>
 
   <!-- 菜品列表 -->
   <view class="dish-grid" wx:if="{{dishes.length > 0}}">
     <view class="dish-card" wx:for="{{filteredDishes}}" wx:key="_id"
           data-id="{{item._id}}" bindtap="toDetailPage" bindlongpress="showDeleteConfirm">
-      <image class="dish-card-image" wx:if="{{!item.imageUrl}}" src="/images/bba273d65e7e0a3ae9773c36c18acef1.jpg" mode="aspectFill"></image>
+      <view class="dish-card-image dish-card-placeholder" wx:if="{{!item.imageUrl}}">{{item.typeIcon}}</view>
       <image class="dish-card-image" wx:if="{{item.imageUrl}}" src="{{item.imageUrl}}" mode="aspectFill"></image>
       <view class="dish-card-info">
         <text class="dish-card-name">{{item.name}}</text>
+        <text class="dish-card-spec" wx:if="{{item.spec}}">{{item.spec}}</text>
+        <text class="dish-card-type">{{item.typeLabel}}</text>
         <text class="dish-card-time">{{item.createTimeText}}</text>
       </view>
     </view>
@@ -36,7 +42,7 @@
 
   <!-- 无搜索结果 -->
   <view class="no-result" wx:if="{{dishes.length > 0 && filteredDishes.length === 0}}">
-    <text class="no-result-text">没有找到"{{search}}"相关的菜品</text>
+    <text class="no-result-text">{{search ? '没有找到相关商品' : '暂无此类型商品'}}</text>
   </view>
 
   <!-- 悬浮添加按钮 -->

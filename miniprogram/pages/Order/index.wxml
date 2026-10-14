@@ -1,23 +1,30 @@
 <view class="container">
   <!-- 页面头部 -->
   <view class="page-header">
-    <text class="page-title">今天吃什么？</text>
-    <text class="page-subtitle">选好菜品，通知{{partnerName}}~</text>
+    <text class="page-title">点单</text>
+    <text class="page-subtitle">给{{partnerName}}下单</text>
+    <view class="wish-entry" bindtap="goToWish"><text>写个心愿</text><text>＋</text></view>
     <!-- 搜索框 -->
     <view class="search-box">
       <text class="search-icon">🔍</text>
-      <input class="search-input" placeholder="搜索菜品" value="{{searchKey}}" bindinput="onSearchInput" confirm-type="search" />
+      <input class="search-input" placeholder="搜索商品" value="{{searchKey}}" bindinput="onSearchInput" confirm-type="search" />
       <text class="search-clear" wx:if="{{searchKey}}" bindtap="clearSearch">✕</text>
     </view>
   </view>
 
+  <view class="pending-notice" wx:if="{{pendingRequest}}" bindtap="retryPendingOrder">上次提交结果待确认 · {{submitting ? '确认中…' : '点击重试'}}</view>
+  <view class="load-error" wx:if="{{loadError}}" bindtap="loadDishes">{{loadError}}</view>
+  <view class="load-error" wx:if="{{loading}}">加载中…</view>
+
   <!-- 空状态 -->
-  <view class="empty-state" wx:if="{{dishes.length === 0 && !loading}}">
+  <view class="empty-state" wx:if="{{allDishes.length === 0 && !loading && !loadError}}">
     <image class="empty-image" src="/images/1efe5aea4d976b0e8597d4ffd5c068bc.jpg" mode="aspectFit"></image>
-    <text class="empty-title">菜品库还是空的</text>
-    <text class="empty-desc">先去添加一些菜品吧~</text>
-    <view class="btn-primary" bindtap="goToDishes">去添加菜品</view>
+    <text class="empty-title">商品库还是空的</text>
+    <text class="empty-desc">先去添加一些商品吧~</text>
+    <view class="btn-primary" bindtap="goToDishes">去添加商品</view>
   </view>
+
+  <view class="empty-state" wx:if="{{allDishes.length > 0 && dishes.length === 0 && !loading}}"><text class="empty-title">未找到相关商品</text><text class="empty-desc" bindtap="clearSearch">清除搜索</text></view>
 
   <!-- 左右分栏布局 -->
   <view class="menu-container" wx:if="{{dishes.length > 0}}">
@@ -33,7 +40,7 @@
       </view>
     </scroll-view>
 
-    <!-- 右侧菜品 -->
+    <!-- 右侧商品 -->
     <scroll-view class="dish-list" scroll-y scroll-with-animation
                  scroll-into-view="{{dishScrollId}}" bindscroll="onDishScroll">
       <view wx:for="{{categories}}" wx:key="_id" wx:if="{{categoryCount[item._id] > 0}}">
@@ -48,6 +55,7 @@
           <image class="dish-image" wx:else src="/images/1efe5aea4d976b0e8597d4ffd5c068bc.jpg" mode="aspectFill" data-id="{{dish._id}}" catchtap="openDishDetail"></image>
           <view class="dish-info">
             <text class="dish-name">{{dish.name}}</text>
+            <text class="dish-spec" wx:if="{{dish.spec}}">{{dish.spec}}</text>
             <view class="dish-meta">
               <text class="dish-desc" wx:if="{{dish.description}}">"{{dish.description}}"</text>
               <text class="dish-count" wx:if="{{dish.orderCount > 0}}">已点{{dish.orderCount}}次</text>
@@ -63,33 +71,33 @@
   </view>
 
   <!-- 底部操作栏 -->
-  <view class="footer" wx:if="{{dishes.length > 0}}">
+  <view class="footer" wx:if="{{allDishes.length > 0}}">
     <view class="footer-cart" bindtap="toggleCartPanel">
       <view class="cart-icon-wrap">
         <image class="cart-icon-img" src="/images/4240a5a23a03b63adf5962d90e183f0f-removebg-preview.png" mode="aspectFit"></image>
         <text class="cart-badge" wx:if="{{selectedCount > 0}}">{{selectedCount}}</text>
       </view>
-      <text class="cart-hint" wx:if="{{selectedCount === 0}}">请选择菜品</text>
-      <text class="cart-hint" wx:else>已选{{selectedCount}}道菜</text>
+      <text class="cart-hint" wx:if="{{selectedCount === 0}}">请选择商品</text>
+      <text class="cart-hint" wx:else>已选{{selectedCount}}件商品</text>
     </view>
     <view class="btn-order {{selectedCount > 0 ? 'active' : ''}}" bindtap="submitOrder">
-      确认点菜
+      {{submitting ? '提交中…' : '确认点单'}}
     </view>
   </view>
 </view>
 
-<!-- 已选菜品面板 -->
+<!-- 已选商品面板 -->
 <view class="cart-panel-mask" wx:if="{{showCartPanel}}" bindtap="toggleCartPanel"></view>
 <view class="cart-panel {{showCartPanel ? 'show' : ''}}">
   <view class="cart-panel-header">
-    <text class="cart-panel-title">已选菜品</text>
+    <text class="cart-panel-title">已选商品</text>
     <view class="cart-clear" bindtap="clearCart" wx:if="{{selectedCount > 0}}">
       <text>清空</text>
     </view>
   </view>
   <scroll-view class="cart-panel-list" scroll-y style="width: 100%;">
     <view class="cart-empty" wx:if="{{selectedCount === 0}}">
-      <text>还没有选择菜品哦~</text>
+      <text>还没有选择商品哦~</text>
     </view>
     <view class="cart-item" wx:for="{{selectedDishes}}" wx:key="_id">
       <image class="cart-item-image" wx:if="{{item.imageUrl}}" src="{{item.imageUrl}}" mode="aspectFill"></image>
@@ -113,12 +121,13 @@
   <view class="remark-content" catchtap="preventClose">
     <view class="remark-close" bindtap="closeRemarkModal">✕</view>
     <text class="remark-title">添加备注</text>
-    <text class="remark-hint">给对方留句话吧~（最多100字）</text>
-    <textarea class="remark-input" placeholder="例如：今天想吃清淡点~" bindinput="onRemarkInput" value="{{remark}}"></textarea>
+    <text class="remark-hint">备注（选填，最多100字）</text>
+    <textarea class="remark-input" placeholder="填写备注" bindinput="onRemarkInput" value="{{remark}}" maxlength="100"></textarea>
     <view class="remark-counter">{{remark.length}}/100</view>
+    <view class="date-row"><text>希望日期（选填）</text><picker mode="date" start="{{today}}" value="{{expectedDate}}" bindchange="onExpectedDateChange"><view class="date-value">{{expectedDate || '选择日期'}}</view></picker><text class="date-clear" wx:if="{{expectedDate}}" bindtap="clearExpectedDate">清除</text></view>
     <view class="remark-buttons">
       <view class="btn-skip" bindtap="skipRemark">跳过</view>
-      <view class="btn-confirm" bindtap="confirmRemark">确认</view>
+      <view class="btn-confirm" bindtap="confirmRemark">{{submitting ? '提交中…' : '确认'}}</view>
     </view>
   </view>
 </view>
@@ -127,13 +136,13 @@
 <view class="success-modal" wx:if="{{showSuccess}}">
   <view class="success-content">
     <image class="success-image" src="/images/7b4bee27a7ccb84274ec7753e54c50c7.gif" mode="aspectFit"></image>
-    <text class="success-title">点菜成功！</text>
-    <text class="success-desc">已通知{{partnerName}}啦~</text>
+    <text class="success-title">点单成功</text>
+    <text class="success-desc">订单已提交给{{partnerName}}</text>
     <view class="btn-primary" bindtap="closeSuccess">好的</view>
   </view>
 </view>
 
-<!-- 菜品详情面板 -->
+<!-- 商品详情面板 -->
 <view class="detail-panel-mask" wx:if="{{showDishDetail}}" bindtap="closeDishDetail"></view>
 <view class="detail-panel {{showDishDetail && !detailClosing ? 'show' : ''}} {{detailTranslateY > 0 ? 'dragging' : ''}}"
       style="{{detailTranslateY > 0 ? 'transform: translateY(' + detailTranslateY + 'px)' : ''}}"
@@ -150,6 +159,7 @@
     </view>
     <view class="detail-dish-info">
       <text class="detail-dish-name">{{currentDish.name}}</text>
+      <text class="detail-dish-spec" wx:if="{{currentDish.spec}}">{{currentDish.spec}}</text>
       <view class="detail-dish-meta">
         <text class="detail-dish-count" wx:if="{{currentDish.orderCount > 0}}">已点{{currentDish.orderCount}}次</text>
         <text class="detail-dish-desc" wx:if="{{currentDish.description}}">{{currentDish.description}}</text>
@@ -157,7 +167,7 @@
     </view>
     <view class="detail-action">
       <view class="btn-detail-toggle {{currentDish.selected ? 'remove' : 'add'}}" bindtap="toggleDishInDetail">
-        <text>{{currentDish.selected ? '移出菜单' : '加入菜单'}}</text>
+        <text>{{currentDish.selected ? '移出已选' : '加入已选'}}</text>
       </view>
     </view>
   </view>

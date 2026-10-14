@@ -18,10 +18,16 @@ function generateInviteCode() {
 }
 
 // 云函数入口函数
-exports.main = async (event, context) => {
+exports.main = async (event = {}, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
+  if (!openid) return { success: false, message: '请先登录' }
+  if (!event || typeof event !== 'object' || Array.isArray(event)) return { success: false, message: '请求参数不正确' }
   const { nickname, avatarUrl } = event
+  if ((nickname !== undefined && (typeof nickname !== 'string' || [...nickname].length > 30)) ||
+      (avatarUrl !== undefined && (typeof avatarUrl !== 'string' || avatarUrl.length > 1000 || (avatarUrl && !/^(cloud:\/\/|https:\/\/)/.test(avatarUrl))))) {
+    return { success: false, message: '昵称或头像格式不正确' }
+  }
 
   try {
     // 查询用户是否已存在
@@ -80,7 +86,7 @@ exports.main = async (event, context) => {
     const newUser = {
       _id: openid,
       nickname: nickname || '',
-      avatarUrl: '',
+      avatarUrl: avatarUrl || '',
       partnerId: '',
       inviteCode,
       bindStatus: 'unbound',

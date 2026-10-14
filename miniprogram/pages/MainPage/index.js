@@ -12,7 +12,7 @@ Page({
     todayOrder: null,
     dishCount: 0,
     orderCount: 0,
-    togetherDays: 0,
+    isDemo: false,
     isBound: false,
     profileComplete: false,
   },
@@ -36,6 +36,7 @@ Page({
     // 每次进入首页都强制刷新用户信息，确保绑定状态及时更新
     await app.loadUserInfo(true)
     await this.loadUserInfo()
+    this.setData({ isDemo: !!app.globalData.isDemo })
     app.setKitchenTitle()
     if (!this.hasLoaded) {
       this.setData({ pageLoading: false })
@@ -93,7 +94,7 @@ Page({
   // 加载今日点菜
   async loadTodayOrder() {
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await app.callFunction({
         name: 'getCoupleData',
         data: {
           collection: app.globalData.collectionOrderList,
@@ -111,6 +112,7 @@ Page({
           todayOrder: {
             ...order,
             creatorName,
+            statusText: ({ pending: '待接单', accepted: '进行中', completed: '已完成', cancelled: '已取消' })[order.status || 'pending'],
             timeText: this.formatTime(order.createTime)
           }
         })
@@ -126,11 +128,11 @@ Page({
   async loadStats() {
     try {
       const [dishRes, orderRes] = await Promise.all([
-        wx.cloud.callFunction({
+        app.callFunction({
           name: 'getCoupleData',
           data: { collection: app.globalData.collectionDishList, countOnly: true }
         }),
-        wx.cloud.callFunction({
+        app.callFunction({
           name: 'getCoupleData',
           data: { collection: app.globalData.collectionOrderList, countOnly: true }
         })
@@ -138,8 +140,7 @@ Page({
 
       this.setData({
         dishCount: dishRes.result?.total || 0,
-        orderCount: orderRes.result?.total || 0,
-        togetherDays: (orderRes.result?.total || 0) > 0 ? Math.max(1, orderRes.result.total) : 0
+        orderCount: orderRes.result?.total || 0
       })
     } catch (e) {
       console.error('load stats error', e)
@@ -155,22 +156,8 @@ Page({
     return `${hours}:${minutes}`
   },
 
-  // 订阅消息
-  async requestSubscribeMessage() {
-    wx.requestSubscribeMessage({
-      tmplIds: app.globalData.notifyTmplIds,
-      success: (res) => {
-        if (res[app.globalData.notifyTmplIds[0]] === 'accept') {
-          wx.showToast({ title: '订阅成功', icon: 'success' })
-        } else {
-          wx.showToast({ title: '订阅失败', icon: 'none' })
-        }
-      },
-      fail: (err) => {
-        console.error('subscribe error', err)
-        wx.showToast({ title: '请先申请消息模板', icon: 'none' })
-      }
-    })
+  goToWish() {
+    wx.navigateTo({ url: '/pages/Wish/index' })
   },
 
   // 跳转到点菜页
@@ -184,23 +171,13 @@ Page({
     wx.navigateTo({ url: `/pages/OrderDetail/index?id=${this.data.todayOrder._id}` })
   },
 
-  // 跳转到菜品库
-  goToDishes() {
-    wx.switchTab({ url: '/pages/Dishes/index' })
-  },
-
-  // 跳转到历史
-  goToHistory() {
-    wx.switchTab({ url: '/pages/OrderHistory/index' })
-  },
-
   // 跳转到最近点菜记录
   goToRecentOrder() {
-    wx.requestSubscribeMessage({
+    app.requestSubscribeMessage({
       tmplIds: app.globalData.notifyTmplIds,
       complete: async () => {
         try {
-          const res = await wx.cloud.callFunction({
+          const res = await app.callFunction({
             name: 'getCoupleData',
             data: {
               collection: app.globalData.collectionOrderList,
@@ -225,7 +202,7 @@ Page({
 
   // 跳转到绑定页
   goToBind() {
-    wx.requestSubscribeMessage({
+    app.requestSubscribeMessage({
       tmplIds: app.globalData.notifyTmplIds,
       complete: () => wx.navigateTo({ url: '/pages/Bind/index' })
     })
@@ -233,7 +210,7 @@ Page({
 
   // 跳转到设置页
   goToSettings() {
-    wx.requestSubscribeMessage({
+    app.requestSubscribeMessage({
       tmplIds: app.globalData.notifyTmplIds,
       complete: () => wx.navigateTo({ url: '/pages/Settings/index' })
     })
@@ -241,7 +218,7 @@ Page({
 
   // 跳转到类目管理
   goToCategoryManage() {
-    wx.requestSubscribeMessage({
+    app.requestSubscribeMessage({
       tmplIds: app.globalData.notifyTmplIds,
       complete: () => wx.navigateTo({ url: '/pages/CategoryManage/index' })
     })

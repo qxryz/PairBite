@@ -1,3 +1,6 @@
+const { envList = [], notifyTmplIds = [] } = require('./envList.js')
+const { createDemo } = require('./utils/demo.js')
+
 // 全局页面绑定拦截器 —— 白名单之外的页面自动校验绑定状态
 const _originalPage = Page
 const _bindWhitelist = ['pages/MainPage/index', 'pages/Settings/index', 'pages/Bind/index']
@@ -23,8 +26,6 @@ Page = function(options) {
 
 App({
   async onLaunch() {
-    this.initcloud()
-
     this.globalData = {
       // 当前用户信息（动态获取）
       currentUser: null,
@@ -40,47 +41,120 @@ App({
       collectionOrderList: 'OrderList',
 
       // 应用信息
-      appName: '帕恰狗的小厨房',
+      appName: 'SheWant心愿小店',
       version: '1.0.0',
 
       // 订阅消息模板ID
-      notifyTmplIds: ['your-template-id'],
+      notifyTmplIds: notifyTmplIds.filter(id => typeof id === 'string' && id.trim() && !/your[-_]?template[-_]?id/i.test(id)),
 
       // 菜品分类（从数据库动态加载）
       categories: [],
       categoriesLoaded: false,
+      isDemo: false,
+      demoIdentity: 'requester',
+    }
+    this.initcloud()
+  },
+
+  // 空环境明确使用本机体验；配置环境后所有请求都交给云开发。
+  initcloud() {
+    const envId = typeof envList[0]?.envId === 'string' ? envList[0].envId.trim() : ''
+    this.globalData.isDemo = !envId
+    this._cloudError = null
+    if (!envId) {
+      this._demo = createDemo(wx)
+      this.globalData.demoIdentity = this._demo.getIdentity()
+      return
+    }
+    this._demo = null
+    try {
+      if (!wx.cloud) throw new Error('当前微信版本不支持云开发')
+      wx.cloud.init({ traceUser: true, env: envId })
+    } catch (error) {
+      this._cloudError = error
+      console.error('云环境初始化失败', error)
     }
   },
 
-  flag: false,
+  cloud() {
+    if (this.globalData.isDemo) throw new Error('本地体验不连接云环境')
+    if (this._cloudError) throw this._cloudError
+    if (!wx.cloud) throw new Error('当前微信版本不支持云开发')
+    return wx.cloud
+  },
 
-  /**
-   * 初始化云开发环境
-   */
-  async initcloud() {
-    const normalinfo = require('./envList.js').envList || []
-    if (normalinfo.length != 0 && normalinfo[0].envId != null) {
-      wx.cloud.init({
-        traceUser: true,
-        env: normalinfo[0].envId
+  _withCallbacks(promise, options) {
+    return Promise.resolve(promise).then(result => {
+      if (typeof options.success === 'function') options.success(result)
+      if (typeof options.complete === 'function') options.complete(result)
+      return result
+    }, error => {
+      if (typeof options.fail === 'function') options.fail(error)
+      if (typeof options.complete === 'function') options.complete(error)
+      throw error
+    })
+  },
+
+  callFunction(options) {
+    if (this.globalData.isDemo) return this._withCallbacks(this._demo.callFunction(options), options)
+    return this.cloud().callFunction(options)
+  },
+
+  uploadFile(options) {
+    if (!this.globalData.isDemo) return this.cloud().uploadFile(options)
+    const promise = new Promise((resolve, reject) => {
+      if (!options.filePath) return reject(new Error('请选择图片'))
+      const fileSystem = wx.getFileSystemManager && wx.getFileSystemManager()
+      const saveFile = typeof wx.saveFile === 'function' ? wx.saveFile.bind(wx) : fileSystem && fileSystem.saveFile && fileSystem.saveFile.bind(fileSystem)
+      if (!saveFile) return reject(new Error('当前微信版本不支持保存本地图片'))
+      saveFile({
+        tempFilePath: options.filePath,
+        success: result => resolve({ fileID: result.savedFilePath, isDemo: true }),
+        fail: reject
       })
-      this.cloud = () => {
-        return wx.cloud
-      }
-    } else {
-      this.cloud = () => {
-        wx.showModal({
-          content: '帕恰狗找不到云环境啦~',
-          showCancel: false
-        })
-        throw new Error('无云开发环境')
-      }
-    }
+    })
+    return this._withCallbacks(promise, options)
   },
 
-  // 获取云数据库实例
-  async database() {
-    return (await this.cloud()).database()
+  deleteFile(options) {
+    if (!this.globalData.isDemo) return this.cloud().deleteFile(options)
+    // 本地照片可能被商品或订单快照复用，移除字段即可保留其他记录的图片。
+    const result = { fileList: (options.fileList || []).map(fileID => ({ fileID, status: 0 })), isDemo: true }
+    return this._withCallbacks(Promise.resolve(result), options)
+  },
+
+  requestSubscribeMessage(options = {}) {
+    const tmplIds = (options.tmplIds || this.globalData.notifyTmplIds || [])
+      .filter(id => typeof id === 'string' && id.trim() && !/your[-_]?template[-_]?id/i.test(id))
+    if (this.globalData.isDemo || !tmplIds.length) {
+      const result = {
+        skipped: true,
+        reason: this.globalData.isDemo ? 'demo' : 'not-configured',
+        errMsg: this.globalData.isDemo ? '演示模式不发送订阅消息' : '订阅消息暂未配置'
+      }
+      if (typeof options.complete === 'function') options.complete(result)
+      return Promise.resolve(result)
+    }
+    return wx.requestSubscribeMessage({ ...options, tmplIds })
+  },
+
+  getDemoIdentity() {
+    return this.globalData.isDemo ? this._demo.getIdentity() : null
+  },
+
+  async setDemoIdentity(identity) {
+    if (!this.globalData.isDemo) throw new Error('仅本地体验可以切换身份')
+    this._demo.setIdentity(identity)
+    this.globalData.demoIdentity = identity
+    this.globalData.currentUser = null
+    this.globalData.partner = null
+    this.globalData.userLoaded = false
+    this.globalData.userLoadPromise = null
+    this.globalData.categories = []
+    this.globalData.categoriesLoaded = false
+    this.globalData.reorderDishIds = null
+    this._tempUrlCache = {}
+    return this.loadUserInfo(true)
   },
 
   // 加载用户信息（带缓存）
@@ -99,14 +173,20 @@ App({
     }
 
     // 开始加载
-    this.globalData.userLoadPromise = this._doLoadUserInfo()
-    return this.globalData.userLoadPromise
+    const generation = (this._userLoadGeneration || 0) + 1
+    this._userLoadGeneration = generation
+    const promise = this._doLoadUserInfo(generation)
+    this.globalData.userLoadPromise = promise
+    promise.finally(() => {
+      if (this.globalData.userLoadPromise === promise) this.globalData.userLoadPromise = null
+    })
+    return promise
   },
 
   // 实际加载用户信息
-  async _doLoadUserInfo() {
+  async _doLoadUserInfo(generation) {
     try {
-      const res = await wx.cloud.callFunction({ name: 'createUser' })
+      const res = await this.callFunction({ name: 'createUser' })
       if (res.result && res.result.success) {
         // 转换头像为临时链接
         const avatarIds = [res.result.user?.avatarUrl, res.result.partner?.avatarUrl].filter(u => u && u.startsWith('cloud://'))
@@ -119,6 +199,7 @@ App({
             res.result.partner.avatarUrl = urlMap[res.result.partner.avatarUrl]
           }
         }
+        if (generation !== this._userLoadGeneration) return { currentUser: this.globalData.currentUser, partner: this.globalData.partner }
         this.globalData.currentUser = res.result.user
         this.globalData.partner = res.result.partner
         this.globalData.userLoaded = true
@@ -144,12 +225,12 @@ App({
     }
     try {
       // 先确保初始化默认分类
-      await wx.cloud.callFunction({
+      await this.callFunction({
         name: 'manageCategory',
         data: { action: 'init' }
       })
       // 加载分类列表
-      const res = await wx.cloud.callFunction({
+      const res = await this.callFunction({
         name: 'manageCategory',
         data: { action: 'list' }
       })
@@ -167,7 +248,7 @@ App({
   // 更新用户昵称
   async updateNickname(nickname) {
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await this.callFunction({
         name: 'createUser',
         data: { nickname }
       })
@@ -184,7 +265,7 @@ App({
   // 绑定伴侣
   async bindPartner(inviteCode) {
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await this.callFunction({
         name: 'bindPartner',
         data: { inviteCode }
       })
@@ -203,7 +284,7 @@ App({
   // 解除绑定
   async unbindPartner() {
     try {
-      const res = await wx.cloud.callFunction({ name: 'unbindPartner' })
+      const res = await this.callFunction({ name: 'unbindPartner' })
       if (res.result && res.result.success) {
         this.globalData.partner = null
         if (this.globalData.currentUser) {
@@ -211,6 +292,8 @@ App({
           this.globalData.currentUser.bindStatus = 'unbound'
           this.globalData.currentUser.coupleId = ''
         }
+        this.globalData.categories = []
+        this.globalData.categoriesLoaded = false
         return { success: true }
       }
       return { success: false, message: res.result?.message || '解绑失败' }
@@ -222,7 +305,7 @@ App({
 
   // 检查是否已绑定伴侣
   isBound() {
-    return this.globalData.currentUser?.bindStatus === 'bound' && this.globalData.partner
+    return !!(this.globalData.currentUser?.bindStatus === 'bound' && this.globalData.partner)
   },
 
   // 检查用户信息是否完整（有昵称和头像）
@@ -249,10 +332,10 @@ App({
 
   // 根据 openid 获取显示名称
   getDisplayName(openid) {
-    if (openid === this.globalData.currentUser?._id) {
+    if (openid === this.globalData.currentUser?._id || openid === this.globalData.currentUser?.openid) {
       return '你'
     }
-    if (openid === this.globalData.partner?.openid) {
+    if (openid === this.globalData.partner?.openid || openid === this.globalData.partner?._id) {
       return this.globalData.partner?.nickname || '对方'
     }
     return '未知'
@@ -292,7 +375,7 @@ App({
 
     if (needFetch.length > 0) {
       try {
-        const res = await wx.cloud.callFunction({
+        const res = await this.callFunction({
           name: 'getFileURL',
           data: { fileList: needFetch }
         })
@@ -344,7 +427,7 @@ App({
       return { success: false, message: '名称不能超过8个字' }
     }
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await this.callFunction({
         name: 'updateKitchenName',
         data: { kitchenName: name }
       })

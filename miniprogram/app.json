@@ -10,13 +10,14 @@
     "pages/OrderDetail/index",
     "pages/Settings/index",
     "pages/Bind/index",
-    "pages/CategoryManage/index"
+    "pages/CategoryManage/index",
+    "pages/Wish/index"
   ],
   "window": {
     "backgroundColor": "#F5F9F0",
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#6FCF97",
-    "navigationBarTitleText": "帕恰狗的小厨房",
+    "navigationBarTitleText": "SheWant 心愿小店",
     "navigationBarTextStyle": "white"
   },
   "tabBar": {
@@ -24,27 +25,32 @@
     "selectedColor": "#6FCF97",
     "backgroundColor": "#ffffff",
     "borderStyle": "white",
-    "list": [{
-      "pagePath": "pages/MainPage/index",
-      "iconPath": "images/TabBar/HomeIconGrey.png",
-      "selectedIconPath": "images/TabBar/HomeIconColor.png",
-      "text": "首页"
-    }, {
-      "pagePath": "pages/Order/index",
-      "iconPath": "images/TabBar/MarketIconGrey.png",
-      "selectedIconPath": "images/TabBar/MarketIconColor.png",
-      "text": "点菜"
-    }, {
-      "pagePath": "pages/Dishes/index",
-      "iconPath": "images/TabBar/MissionIconGrey.png",
-      "selectedIconPath": "images/TabBar/MissionIconColor.png",
-      "text": "菜品库"
-    }, {
-      "pagePath": "pages/OrderHistory/index",
-      "iconPath": "images/TabBar/AccountIconGrey.png",
-      "selectedIconPath": "images/TabBar/AccountIconColor.png",
-      "text": "历史"
-    }]
+    "list": [
+      {
+        "pagePath": "pages/MainPage/index",
+        "iconPath": "images/TabBar/HomeIconGrey.png",
+        "selectedIconPath": "images/TabBar/HomeIconColor.png",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/Order/index",
+        "iconPath": "images/TabBar/MarketIconGrey.png",
+        "selectedIconPath": "images/TabBar/MarketIconColor.png",
+        "text": "点单"
+      },
+      {
+        "pagePath": "pages/Dishes/index",
+        "iconPath": "images/TabBar/MissionIconGrey.png",
+        "selectedIconPath": "images/TabBar/MissionIconColor.png",
+        "text": "商品库"
+      },
+      {
+        "pagePath": "pages/OrderHistory/index",
+        "iconPath": "images/TabBar/AccountIconGrey.png",
+        "selectedIconPath": "images/TabBar/AccountIconColor.png",
+        "text": "订单"
+      }
+    ]
   },
   "usingComponents": {
     "bind-guard": "/components/bind-guard/index"

@@ -1,89 +1,49 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
-const db = cloud.database()
+const db = cloud.database({ throwOnNotFound: false })
 const _ = db.command
+const SORT_FIELDS = {
+  DishList: ['createTime', 'updateTime', 'orderCount', 'name'],
+  OrderList: ['createTime', 'updateTime', 'expectedDate'],
+  Category: ['sort', 'createTime', 'name']
+}
 
-exports.main = async (event, context) => {
-  const wxContext = cloud.getWXContext()
-  const currentOpenid = wxContext.OPENID
-  const {
-    collection,
-    docId,
-    orderBy = 'createTime',
-    order = 'desc',
-    limit = 100,
-    skip = 0,
-    countOnly = false,
-    todayOnly = false
-  } = event
-
+exports.main = async (event = {}) => {
+  const currentOpenid = cloud.getWXContext().OPENID
+  if (!event || typeof event !== 'object' || Array.isArray(event)) return { success: false, message: '请求参数不正确' }
+  const { collection, docId, orderBy = 'createTime', order = 'desc', limit = 100, skip = 0, countOnly = false, todayOnly = false } = event
+  if (!currentOpenid) return { success: false, message: '请先登录' }
+  if (!Object.prototype.hasOwnProperty.call(SORT_FIELDS, collection)) return { success: false, message: '不支持的集合' }
+  if (!SORT_FIELDS[collection].includes(orderBy) || !['asc', 'desc'].includes(order) || !Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(skip) || skip < 0 || skip > 10000 || (docId !== undefined && (typeof docId !== 'string' || !docId || docId.length > 128)) || typeof countOnly !== 'boolean' || typeof todayOnly !== 'boolean') {
+    return { success: false, message: '查询参数不正确' }
+  }
   try {
-    // 获取当前用户信息
     const userRes = await db.collection('User').doc(currentOpenid).get()
     const currentUser = userRes.data
-
-    if (!currentUser) {
-      return { success: false, message: '用户不存在' }
-    }
-
-    // 获取当前 coupleId
+    if (!currentUser) return { success: false, message: '用户不存在' }
     const coupleId = currentUser.coupleId
-
-    // 如果没有 coupleId（未绑定），返回空数据
-    if (!coupleId) {
-      if (countOnly) {
-        return { success: true, total: 0 }
-      }
-      return { success: true, data: [], total: 0 }
-    }
-
-    // 如果查询单个文档
+    if (!coupleId || currentUser.bindStatus !== 'bound') return countOnly ? { success: true, total: 0 } : { success: true, data: [], total: 0 }
     if (docId) {
-      const docRes = await db.collection(collection).doc(docId).get()
-      const doc = docRes.data
-      // 验证是否属于当前 coupleId
-      if (doc.coupleId !== coupleId) {
-        return { success: false, message: '无权访问' }
-      }
+      const { data: doc } = await db.collection(collection).doc(docId).get()
+      if (!doc || doc.coupleId !== coupleId) return { success: false, message: '无权访问' }
       return { success: true, data: doc }
     }
-
-    // 构建 where 条件：按 coupleId 查询
-    let whereCondition = { coupleId }
-
-    // 如果只查今天的数据
+    const whereCondition = { coupleId }
     if (todayOnly) {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      whereCondition.createTime = _.gte(today)
+      // 云端时区不一定为北京时间。
+      const now = Date.now()
+      const start = Math.floor((now + 8 * 3600000) / 86400000) * 86400000 - 8 * 3600000
+      whereCondition.createTime = _.gte(new Date(start))
     }
-
-    // 如果只需要统计数量
+    const query = db.collection(collection).where(whereCondition)
     if (countOnly) {
-      const countRes = await db.collection(collection)
-        .where(whereCondition)
-        .count()
-      return {
-        success: true,
-        total: countRes.total
-      }
+      const countRes = await query.count()
+      return { success: true, total: countRes.total }
     }
-
-    // 查询数据
-    const res = await db.collection(collection)
-      .where(whereCondition)
-      .orderBy(orderBy, order)
-      .skip(skip)
-      .limit(limit)
-      .get()
-
-    return {
-      success: true,
-      data: res.data,
-      total: res.data.length
-    }
-  } catch (e) {
-    console.error('getCoupleData error', e)
-    return { success: false, message: '查询失败', error: e.message }
+    const res = await query.orderBy(orderBy, order).skip(skip).limit(limit).get()
+    return { success: true, data: res.data, total: res.data.length }
+  } catch (error) {
+    console.error('getCoupleData error', error.message)
+    return { success: false, message: '查询失败，请重试' }
   }
 }

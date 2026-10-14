@@ -14,6 +14,9 @@ Page({
     tempNickname: '',
     tempAvatarUrl: '',
     saving: false,
+    isDemo: false,
+    demoIdentity: '',
+    version: '',
   },
 
   onLoad(options) {
@@ -48,7 +51,10 @@ Page({
   // 加载应用信息
   loadAppInfo() {
     this.setData({
-      appName: app.getKitchenName()
+      appName: app.getKitchenName(),
+      isDemo: !!app.globalData.isDemo,
+      demoIdentity: app.getDemoIdentity(),
+      version: app.globalData.version
     })
   },
 
@@ -56,11 +62,11 @@ Page({
   async loadStats() {
     try {
       const [dishRes, orderRes] = await Promise.all([
-        wx.cloud.callFunction({
+        app.callFunction({
           name: 'getCoupleData',
           data: { collection: app.globalData.collectionDishList, countOnly: true }
         }),
-        wx.cloud.callFunction({
+        app.callFunction({
           name: 'getCoupleData',
           data: { collection: app.globalData.collectionOrderList, countOnly: true }
         })
@@ -126,7 +132,7 @@ Page({
       // 如果选择了新头像，上传到云存储
       if (tempAvatarUrl) {
         const cloudPath = `avatars/${Date.now()}-${Math.random().toString(36).substr(2)}.jpg`
-        const uploadRes = await wx.cloud.uploadFile({
+        const uploadRes = await app.uploadFile({
           cloudPath,
           filePath: tempAvatarUrl
         })
@@ -134,10 +140,12 @@ Page({
       }
 
       // 调用云函数更新用户信息
-      await wx.cloud.callFunction({
+      const result = await app.callFunction({
         name: 'createUser',
         data: { nickname, avatarUrl }
       })
+
+      if (!result.result?.success) throw new Error(result.result?.message || '保存失败')
 
       // 刷新用户信息
       await app.loadUserInfo(true)
@@ -155,21 +163,32 @@ Page({
     }
   },
 
-  // 请求订阅消息权限
-  requestNotifyPermission() {
-    wx.requestSubscribeMessage({
-      tmplIds: app.globalData.notifyTmplIds,
-      success: (res) => {
-        if (res[app.globalData.notifyTmplIds[0]] === 'accept') {
-          wx.showToast({ title: '订阅成功', icon: 'success' })
-        } else {
-          wx.showToast({ title: '需要授权才能收到通知', icon: 'none' })
-        }
-      },
-      fail: () => {
-        wx.showToast({ title: '订阅失败', icon: 'none' })
+  async switchDemoIdentity(e) {
+    if (!this.data.isDemo) return
+    try {
+      await app.setDemoIdentity(e.currentTarget.dataset.identity)
+      await this.loadUserInfo()
+      this.loadAppInfo()
+      await this.loadStats()
+      wx.showToast({ title: '已切换体验身份', icon: 'none' })
+    } catch (error) {
+      wx.showToast({ title: error.message || '切换失败', icon: 'none' })
+    }
+  },
+
+  // 授权给当前微信账号；双方需要分别开启自己的提醒。
+  async requestNotifyPermission() {
+    try {
+      const result = await app.requestSubscribeMessage({ tmplIds: app.globalData.notifyTmplIds })
+      if (result.skipped) {
+        wx.showToast({ title: this.data.isDemo ? '本机体验不发送微信消息' : '订单提醒尚未配置', icon: 'none' })
+      } else {
+        const accepted = app.globalData.notifyTmplIds.some(id => result[id] === 'accept')
+        wx.showToast({ title: accepted ? '已允许订单提醒' : '未开启订单提醒', icon: 'none' })
       }
-    })
+    } catch (error) {
+      wx.showToast({ title: '暂时无法开启提醒', icon: 'none' })
+    }
   },
 
 })

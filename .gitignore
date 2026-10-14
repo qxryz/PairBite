@@ -1,3 +1,31 @@
 node_modules/
+miniprogram_npm/
+dist/
+target/
+coverage/
 .idea/
+.vscode/
 .DS_Store
+*.log
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.local
+*.local.*
+*.pem
+*.key
+project.private.config.json
+
+# Agent instructions and development-only notes
+AGENTS.md
+CLAUDE.md
+.agents/
+.codex/
+PLAN.md
+plan.md
+HANDOFF.md
+handoff.md
+*开发计划*.md
+*交接*.md

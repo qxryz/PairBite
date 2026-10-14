@@ -11,6 +11,7 @@
 </view>
 
 <view class="container" wx:else>
+  <view wx:if="{{isDemo}}" class="demo-banner" bindtap="goToSettings"><text>本机体验</text><text>切换下单方 / 接单方 ›</text></view>
   <!-- 顶部区域：已绑定显示情侣卡片，未绑定显示欢迎卡片 -->
   <view class="welcome-section {{isBound ? 'couple-mode' : ''}}">
     <!-- 未绑定：原欢迎卡片 -->
@@ -18,19 +19,19 @@
       <image class="avatar-image" src="{{userAvatar || 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCJ1aPAK2dQagdusBZg/0'}}" mode="aspectFill" bindtap="goToSettings"></image>
       <view class="welcome-text">
         <text class="greeting">{{greeting}}，{{userName || '新朋友'}}！</text>
-        <text class="sub-greeting">今天想吃点什么呀？</text>
+        <text class="sub-greeting">点菜、会员、小礼物</text>
       </view>
     </view>
     <!-- 已绑定：情侣卡片 -->
     <view wx:else class="couple-header" bindtap="goToBind">
-      <view class="couple-greeting">{{greeting}}，一起吃点什么？</view>
+      <view class="couple-greeting">今天想要什么？</view>
       <view class="couple-avatars-top">
         <view class="couple-avatar-item" catchtap="goToSettings">
           <image class="couple-avatar-img" src="{{userAvatar}}" mode="aspectFill"></image>
           <text class="couple-avatar-name">{{userName}}</text>
         </view>
         <view class="couple-heart-center">
-          <view class="couple-heart-beat">🍔</view>
+          <view class="couple-heart-beat">♡</view>
           <text class="couple-days" wx:if="{{bindDays > 0}}">{{bindDays}}天</text>
         </view>
         <view class="couple-avatar-item">
@@ -47,7 +48,7 @@
       <text class="bind-tip-icon">👤</text>
       <view class="bind-tip-content">
         <text class="bind-tip-title">还没有设置头像和昵称</text>
-        <text class="bind-tip-desc">点击设置，让伴侣认识你~</text>
+        <text class="bind-tip-desc">设置头像和昵称</text>
       </view>
       <text class="bind-tip-arrow">></text>
     </view>
@@ -59,7 +60,7 @@
       <text class="bind-tip-icon">💕</text>
       <view class="bind-tip-content">
         <text class="bind-tip-title">还没有绑定另一半</text>
-        <text class="bind-tip-desc">点击邀请TA一起使用小厨房</text>
+        <text class="bind-tip-desc">邀请另一半加入小店</text>
       </view>
       <text class="bind-tip-arrow">></text>
     </view>
@@ -67,25 +68,26 @@
 
   <!-- 今日状态卡片 -->
   <view class="status-section" wx:if="{{isBound}}">
-    <view class="section-title">🍽️ 今日点菜</view>
+    <view class="section-title">📋 今日订单</view>
     <view class="status-card" wx:if="{{todayOrder}}" bindtap="goToTodayOrder">
       <view class="status-header">
-        <text class="status-label">{{todayOrder.creatorName}} 点了菜</text>
+        <text class="status-label">{{todayOrder.creatorName}} 下了单 · {{todayOrder.statusText}}</text>
         <text class="status-time">{{todayOrder.timeText}}</text>
       </view>
       <view class="status-dishes">
+        <view class="dish-tag" wx:if="{{todayOrder.wish}}">{{todayOrder.wish.title}}</view>
         <view class="dish-tag" wx:for="{{todayOrder.dishes}}" wx:key="index">
           {{item.name}}
         </view>
       </view>
       <view class="photo-hint" wx:if="{{!todayOrder.finishedPhoto}}">
-        <text>📷 做好了记得拍一张~</text>
+        <text>查看订单进度 ›</text>
       </view>
     </view>
     <view class="empty-card" wx:else>
       <image class="empty-image" src="/images/bc5fd6af900184aaa9ebabeb236e76b0.gif" mode="aspectFit"></image>
-      <text class="empty-text">今天还没有点菜哦~</text>
-      <view class="btn-primary" bindtap="goToOrder">去点菜</view>
+      <text class="empty-text">今天还没有订单</text>
+      <view class="btn-primary" bindtap="goToOrder">去点单</view>
     </view>
   </view>
 
@@ -94,6 +96,8 @@
   <view class="quick-section">
     <view class="section-title">⚡ 快捷操作</view>
     <view class="quick-grid">
+      <view class="quick-item" bindtap="goToOrder"><view class="quick-icon" style="background:#E8F5E9;">🛍️</view><text class="quick-label">点单</text></view>
+      <view class="quick-item" bindtap="goToWish"><view class="quick-icon" style="background:#FFF3E0;">🎁</view><text class="quick-label">写个心愿</text></view>
       <view class="quick-item" bindtap="goToSettings">
         <view class="quick-icon" style="background: #E8F5E9;">👤</view>
         <text class="quick-label">个人中心</text>
@@ -108,28 +112,28 @@
       </view>
       <view class="quick-item" bindtap="goToRecentOrder">
         <view class="quick-icon" style="background: #FFF3E0;">📋</view>
-        <text class="quick-label">最近点菜</text>
+        <text class="quick-label">最近订单</text>
       </view>
     </view>
   </view>
 
   <!-- 菜品统计 -->
   <view class="stats-section" wx:if="{{isBound}}">
-    <view class="section-title">📊 小厨房统计</view>
+    <view class="section-title">📊 小店统计</view>
     <view class="stats-card">
       <view class="stat-item">
         <text class="stat-number">{{dishCount}}</text>
-        <text class="stat-label">菜品总数</text>
+        <text class="stat-label">商品总数</text>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
         <text class="stat-number">{{orderCount}}</text>
-        <text class="stat-label">点菜次数</text>
+        <text class="stat-label">下单次数</text>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
-        <text class="stat-number">{{togetherDays}}</text>
-        <text class="stat-label">一起吃饭</text>
+        <text class="stat-number">{{bindDays}}</text>
+        <text class="stat-label">绑定天数</text>
       </view>
     </view>
   </view>
@@ -138,7 +142,7 @@
   <view class="footer-decoration">
     <view class="footer-content">
       <image class="footer-mascot" src="/images/4aa65830d0f97dad0cb40d992405e6cc-removebg-preview.png" mode="aspectFit"></image>
-      <text class="footer-text">帕恰狗祝你们用餐愉快 ~</text>
+      <text class="footer-text">SheWant · 心愿小店</text>
     </view>
   </view>
 </view>

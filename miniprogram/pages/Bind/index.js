@@ -75,11 +75,11 @@ Page({
   async loadStats() {
     try {
       const [dishRes, orderRes] = await Promise.all([
-        wx.cloud.callFunction({
+        app.callFunction({
           name: 'getCoupleData',
           data: { collection: app.globalData.collectionDishList, countOnly: true }
         }),
-        wx.cloud.callFunction({
+        app.callFunction({
           name: 'getCoupleData',
           data: { collection: app.globalData.collectionOrderList, countOnly: true }
         })
@@ -119,7 +119,7 @@ Page({
       wx.hideLoading()
       wx.showToast({ title: '绑定成功', icon: 'success' })
       // 绑定成功后立即请求通知授权，为接收伴侣点菜通知积攒额度
-      wx.requestSubscribeMessage({
+      app.requestSubscribeMessage({
         tmplIds: app.globalData.notifyTmplIds,
         complete: () => {}
       })
@@ -134,7 +134,7 @@ Page({
   unbindPartner() {
     wx.showModal({
       title: '确认解绑',
-      content: '解绑后你们将无法互相看到对方的点菜，确定要解绑吗？',
+      content: '解绑后你们将无法互相看到对方的订单，确定要解绑吗？',
       confirmColor: '#E57373',
       success: async (res) => {
         if (res.confirm) {
@@ -167,7 +167,7 @@ Page({
   onShareAppMessage() {
     const { inviteCode, nickname } = this.data
     return {
-      title: `${nickname || '我'}邀请你一起使用帕恰狗的小厨房`,
+      title: `${nickname || '我'}邀请你加入心愿小店`,
       path: `/pages/MainPage/index?inviteCode=${inviteCode}`,
       imageUrl: '/images/123.jpg'
     }
@@ -206,7 +206,7 @@ Page({
   async saveKitchenName() {
     const { tempKitchenName } = this.data
     if (!tempKitchenName.trim()) {
-      wx.showToast({ title: '请输入厨房名称', icon: 'none' })
+      wx.showToast({ title: '请输入小店名称', icon: 'none' })
       return
     }
     if (tempKitchenName.length > 8) {

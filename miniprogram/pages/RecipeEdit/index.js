@@ -1,4 +1,5 @@
 const app = getApp()
+const { normalizeProductType } = require('../../utils/product.js')
 const {
   DIFFICULTY_OPTIONS,
   COOK_TIME_OPTIONS,
@@ -21,6 +22,7 @@ Page({
     difficultyIndex: 0,
     saving: false,
     loadingDish: true,
+    canEdit: false,
     ingredientsHeight: 80,      // textarea 高度（rpx），由 estimateHeight 计算
     stepsHeight: 80,
   },
@@ -38,7 +40,7 @@ Page({
       return
     }
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await app.callFunction({
         name: 'getCoupleData',
         data: {
           collection: app.globalData.collectionDishList,
@@ -47,6 +49,10 @@ Page({
       })
       if (!res.result?.success) throw new Error(res.result?.message || '加载失败')
       const dish = res.result.data
+      if (normalizeProductType(dish.type) !== 'food') {
+        this.setData({ loadingDish: false, canEdit: false })
+        return
+      }
       const difficulty = dish.difficulty && DIFFICULTY_OPTIONS.includes(dish.difficulty)
         ? dish.difficulty
         : '简单'
@@ -62,6 +68,7 @@ Page({
         ingredientsHeight: estimateHeight(dish.ingredients),
         stepsHeight: estimateHeight(dish.steps),
         loadingDish: false,
+        canEdit: true,
       })
     } catch (e) {
       console.error('load dish error', e)
@@ -94,14 +101,14 @@ Page({
   },
 
   async save() {
-    if (this.data.saving) return
+    if (this.data.saving || this.data.loadingDish || !this.data.canEdit || !this.data.dishId) return
     if (!this.data.ingredients.trim() && !this.data.steps.trim()) {
       wx.showToast({ title: '菜谱不能为空', icon: 'none' })
       return
     }
     this.setData({ saving: true })
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await app.callFunction({
         name: 'updateCoupleData',
         data: {
           collection: app.globalData.collectionDishList,
@@ -125,5 +132,9 @@ Page({
     } finally {
       this.setData({ saving: false })
     }
+  },
+
+  backToDetail() {
+    wx.navigateBack()
   },
 })

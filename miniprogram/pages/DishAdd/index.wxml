@@ -1,19 +1,28 @@
 <view class="container">
   <!-- 页面头部 -->
   <view class="page-header">
-    <text class="page-title">{{isEdit ? '编辑菜品' : '添加菜品'}}</text>
-    <text class="page-subtitle">{{isEdit ? '修改菜品信息' : '给小厨房添加新成员 ~'}}</text>
+    <text class="page-title">{{isEdit ? '编辑商品' : '添加商品'}}</text>
+    <text class="page-subtitle">填写商品信息</text>
   </view>
 
   <!-- 表单区域 -->
   <view class="form-section">
+    <view class="input-card">
+      <view class="input-label">
+        <text class="label-icon">📋</text>
+        <text class="label-text">商品类型</text>
+      </view>
+      <view class="type-options">
+        <view class="type-option {{type === item.value ? 'active' : ''}}" wx:for="{{productTypes}}" wx:key="value" data-type="{{item.value}}" bindtap="onTypeChange">{{item.icon}} {{item.label}}</view>
+      </view>
+    </view>
     <!-- 图片上传 -->
     <view class="upload-card {{imageUrl ? 'has-image' : ''}}" bindtap="chooseImage">
       <image wx:if="{{imageUrl}}" class="preview-image" src="{{imageUrl}}" mode="widthFix"></image>
       <view wx:else class="upload-placeholder">
-        <text class="upload-icon">📷</text>
-        <text class="upload-text">点击上传菜品图片</text>
-        <text class="upload-hint">支持从相册选择或拍照</text>
+        <text class="upload-icon">{{typeIcon}}</text>
+        <text class="upload-text">添加商品图片（选填）</text>
+        <text class="upload-hint">从相册选择或拍照</text>
       </view>
       <!-- 清空图片：有图时显示在右上角 -->
       <view class="clear-image-btn" wx:if="{{imageUrl}}" catchtap="clearImage">
@@ -24,10 +33,10 @@
     <!-- 菜品名称 -->
     <view class="input-card">
       <view class="input-label">
-        <text class="label-icon">🍽️</text>
-        <text class="label-text">菜品名称</text>
+        <text class="label-icon">{{typeIcon}}</text>
+        <text class="label-text">商品名称</text>
       </view>
-      <input class="input-field" placeholder="给这道菜起个名字吧"
+      <input class="input-field" placeholder="{{type === 'membership' ? '例如：芒果 TV 会员' : type === 'gift' ? '例如：鲜花' : '例如：番茄炒蛋'}}" maxlength="20"
              placeholderClass="input-placeholder"
              bindinput="onNameInput" value="{{name}}" />
       <text class="input-counter">{{name.length}}/20</text>
@@ -37,31 +46,39 @@
     <view class="input-card">
       <view class="input-label">
         <text class="label-icon">📂</text>
-        <text class="label-text">菜品分类</text>
+        <text class="label-text">商品分类</text>
       </view>
       <picker mode="selector" range="{{categories}}" range-key="name" value="{{categoryIndex}}" bindchange="onCategoryChange">
         <view class="picker-value">
-          <text>{{categories[categoryIndex].icon}} {{categories[categoryIndex].name}}</text>
+          <text>{{categories.length ? categories[categoryIndex].icon + ' ' + categories[categoryIndex].name : '请先在类目管理中添加分类'}}</text>
           <text class="picker-arrow">›</text>
         </view>
       </picker>
+    </view>
+
+    <view class="input-card" wx:if="{{type !== 'food'}}">
+      <view class="input-label">
+        <text class="label-icon">🏷️</text>
+        <text class="label-text">规格</text>
+        <text class="label-optional">（选填）</text>
+      </view>
+      <input class="input-field" placeholder="{{type === 'membership' ? '例如：30 天、连续包月' : '例如：一束、粉色、尺寸'}}" placeholderClass="input-placeholder" maxlength="40" bindinput="onSpecInput" value="{{spec}}" />
+      <text class="input-counter">{{spec.length}}/40</text>
     </view>
 
     <!-- 菜品描述 -->
     <view class="input-card">
       <view class="input-label">
         <text class="label-icon">💬</text>
-        <text class="label-text">一句话描述</text>
-        <text class="label-optional">（选填，最多6字）</text>
+        <text class="label-text">商品描述</text>
+        <text class="label-optional">（选填）</text>
       </view>
-      <input class="input-field" placeholder="例如：超下饭"
-             placeholderClass="input-placeholder"
-             bindinput="onDescInput" value="{{description}}" />
-      <text class="input-counter">{{description.length}}/6</text>
+      <textarea class="description-field" placeholder="填写商品说明或参考链接" placeholder-class="input-placeholder" maxlength="300" auto-height bindinput="onDescInput" value="{{description}}" />
+      <text class="input-counter">{{description.length}}/300</text>
     </view>
 
     <!-- 菜谱（合到一张卡，跟其他字段卡片一致） -->
-    <view class="input-card">
+    <view class="input-card" wx:if="{{type === 'food'}}">
       <view class="input-label">
         <text class="label-icon">📖</text>
         <text class="label-text">菜谱</text>
@@ -126,7 +143,7 @@
   <!-- 底部按钮 -->
   <view class="footer">
     <view class="btn-reset" bindtap="resetForm">重置</view>
-    <view class="btn-save" bindtap="saveDish">{{isEdit ? '保存修改' : '保存菜品'}}</view>
+    <view class="btn-save {{saving || loadingDish ? 'btn-disabled' : ''}}" bindtap="saveDish">{{saving ? '保存中...' : loadingDish ? '加载中...' : isEdit ? '保存修改' : '保存商品'}}</view>
   </view>
 </view>
 <bind-guard />
