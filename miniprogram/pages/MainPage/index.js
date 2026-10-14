@@ -3,6 +3,7 @@ const app = getApp()
 Page({
   data: {
     pageLoading: true,
+    startupError: '',
     greeting: '你好',
     userName: '',
     userAvatar: '',
@@ -33,15 +34,24 @@ Page({
     if (!this.hasLoaded) {
       this.setData({ pageLoading: true })
     }
+    if (app.globalData.startupError) {
+      this.setData({ startupError: app.globalData.startupError, pageLoading: false })
+      return
+    }
     // 每次进入首页都强制刷新用户信息，确保绑定状态及时更新
     await app.loadUserInfo(true)
     await this.loadUserInfo()
-    this.setData({ isDemo: !!app.globalData.isDemo })
+    this.setData({ isDemo: !!app.globalData.isDemo, startupError: '' })
     app.setKitchenTitle()
-    if (!this.hasLoaded) {
-      this.setData({ pageLoading: false })
-      this.hasLoaded = true
-    }
+    this.setData({ pageLoading: false })
+    this.hasLoaded = true
+  },
+
+  retryStartup() {
+    if (this.data.pageLoading) return
+    this.setData({ pageLoading: true, startupError: '' })
+    app.initcloud()
+    return this.onShow()
   },
 
   // 加载用户信息

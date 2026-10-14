@@ -13,7 +13,7 @@ Two people share a menu of food, memberships, and gifts. Select items or submit 
 - Supports menu orders with notes and a requested date, or a separate wish with a reference link.
 - Filters orders by all, created by me, or received. Recipients handle orders; creators can cancel pending orders.
 - Provides a local demo when no cloud environment is configured, with requester and recipient identities.
-- Can attempt WeChat subscription notifications after real templates are configured.
+- Can attempt new-order and status notifications after real WeChat subscription templates are configured.
 
 ## Run locally
 
@@ -50,7 +50,7 @@ Real use by two people requires your own Mini Program AppID, cloud environment, 
 
 The AppID and cloud environment must match. A local demo cannot confirm cross-device synchronization or message delivery without a real AppID and environment.
 
-### 2. Create the collections and set permissions
+### 2. Configure the database and cloud storage
 
 Keep the original four collections and data model:
 
@@ -71,6 +71,18 @@ Apply the following custom security rule to **each** collection to deny direct M
 ```
 
 Cloud functions handle data access. Shared queries and mutations check the authenticated user, reciprocal binding, and `coupleId`. Products are created through `updateCoupleData` with action `add`; orders are created on the server through `manageOrder`. Do not open client access to work around a permission error.
+
+In each collection's index manager, create the following non-unique indexes in the listed field order and directions. These cover the queries used by the current pages:
+
+| Collection | Index fields, left to right |
+| --- | --- |
+| `User` | `inviteCode ASC` |
+| `DishList` | `coupleId ASC, createTime DESC` |
+| `DishList` | `coupleId ASC, category ASC` |
+| `OrderList` | `coupleId ASC, createTime DESC` |
+| `Category` | `coupleId ASC, sort ASC` |
+
+Under **Cloud Storage → Permissions**, select **Only the creator and administrators can read and write**. The Mini Program uploads avatars, product images, and completion photos directly; the `getFileURL` cloud function provides temporary URLs for shared images. Do not apply the database rule above to cloud storage: denying all client writes would prevent image uploads.
 
 Legacy products without `type` are treated as food; legacy orders without `status` display as pending. Back up existing data and verify it in your own test environment before deployment.
 
@@ -100,7 +112,7 @@ Add actual templates available to your Mini Program in the [WeChat platform](htt
 
 | Variable | Purpose |
 | --- | --- |
-| `NOTIFY_TEMPLATE_ID` | New order and product template ID |
+| `NOTIFY_TEMPLATE_ID` | New-order template ID |
 | `ORDER_STATUS_TEMPLATE_ID` | Status template ID; defaults to the preceding ID |
 | `NOTIFY_TEMPLATE_FIELDS` | JSON string mapping semantic names to template fields |
 | `ORDER_STATUS_TEMPLATE_FIELDS` | Status field mapping; defaults to the preceding mapping |
@@ -113,7 +125,7 @@ Example mapping:
 
 These example fields came from the original template. Replace them with your actual template field IDs and types. The client authorization template IDs must match those used by the cloud function. Placeholder IDs do not work.
 
-The recipient must authorize the template and have available subscription quota. Missing templates skip sending. A send failure does not undo a created order or status update. Each notification state is attempted at most once per order; delivery is not guaranteed and is not automatically retried.
+Notifications are triggered by order creation and status changes; adding a product does not trigger one. The recipient must authorize the template and have available subscription quota. Missing templates skip sending. A send failure does not undo a created order or status update. Each notification state is attempted at most once per order; delivery is not guaranteed and is not automatically retried.
 
 ### 5. Verify with two people and publish
 

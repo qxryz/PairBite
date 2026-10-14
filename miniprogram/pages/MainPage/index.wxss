@@ -474,3 +474,6 @@
 }
 
 .demo-banner { display:flex; justify-content:space-between; gap:16rpx; padding:18rpx 24rpx; margin-bottom:20rpx; border-radius:16rpx; background:#E8F5E9; color:#43825B; font-size:24rpx; }
+
+.startup-error { padding-top: 120rpx; }
+.startup-error-title { margin-bottom: 20rpx; font-size: 32rpx; font-weight: 500; color: #333; }

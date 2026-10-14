@@ -63,10 +63,13 @@ function snapshot(dish) {
 }
 async function notify(event, order, type) {
   try {
-    await cloud.callFunction({ name: 'sendNotify', data: { type, orderId: order._id, templateId: event.templateId || '' } })
+    const response = await cloud.callFunction({ name: 'sendNotify', data: { type, orderId: order._id, templateId: event.templateId || '' } })
+    if (response && response.result && response.result.success === false) {
+      console.warn('订单通知未送达', { type, status: order.status || 'pending', code: 'NOTIFY_REJECTED' })
+    }
   } catch (error) {
     // 订阅消息是尽力发送，订单及状态已经提交，不因通知失败重试写入。
-    console.warn('order notification failed', error.message)
+    console.warn('订单通知调用失败', { type, status: order.status || 'pending', code: typeof error.errCode === 'number' ? error.errCode : 'CALL_FAILED' })
   }
 }
 

@@ -10,6 +10,14 @@
   </view>
 </view>
 
+<view class="container startup-error" wx:elif="{{startupError}}">
+  <view class="empty-card">
+    <text class="startup-error-title">小店暂时无法打开</text>
+    <text class="empty-text">{{startupError}}</text>
+    <view class="btn-primary" bindtap="retryStartup">重试</view>
+  </view>
+</view>
+
 <view class="container" wx:else>
   <view wx:if="{{isDemo}}" class="demo-banner" bindtap="goToSettings"><text>本机体验</text><text>切换下单方 / 接单方 ›</text></view>
   <!-- 顶部区域：已绑定显示情侣卡片，未绑定显示欢迎卡片 -->

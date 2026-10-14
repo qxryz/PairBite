@@ -25,7 +25,7 @@ Page = function(options) {
 }
 
 App({
-  async onLaunch() {
+  onLaunch() {
     this.globalData = {
       // 当前用户信息（动态获取）
       currentUser: null,
@@ -52,6 +52,7 @@ App({
       categoriesLoaded: false,
       isDemo: false,
       demoIdentity: 'requester',
+      startupError: '',
     }
     this.initcloud()
   },
@@ -60,19 +61,25 @@ App({
   initcloud() {
     const envId = typeof envList[0]?.envId === 'string' ? envList[0].envId.trim() : ''
     this.globalData.isDemo = !envId
+    this.globalData.startupError = ''
+    this._startupError = null
     this._cloudError = null
-    if (!envId) {
-      this._demo = createDemo(wx)
-      this.globalData.demoIdentity = this._demo.getIdentity()
-      return
-    }
     this._demo = null
     try {
+      if (!envId) {
+        this._demo = createDemo(wx)
+        this.globalData.demoIdentity = this._demo.getIdentity()
+        return true
+      }
       if (!wx.cloud) throw new Error('当前微信版本不支持云开发')
       wx.cloud.init({ traceUser: true, env: envId })
+      return true
     } catch (error) {
-      this._cloudError = error
-      console.error('云环境初始化失败', error)
+      this._startupError = error
+      this.globalData.startupError = !envId ? '本机存储暂时不可用，请重试' : '暂时无法连接小店，请重试'
+      if (envId) this._cloudError = error
+      console.error(!envId ? '本机体验初始化失败' : '云环境初始化失败', error)
+      return false
     }
   },
 
@@ -96,11 +103,13 @@ App({
   },
 
   callFunction(options) {
+    if (this._startupError) throw this._startupError
     if (this.globalData.isDemo) return this._withCallbacks(this._demo.callFunction(options), options)
     return this.cloud().callFunction(options)
   },
 
   uploadFile(options) {
+    if (this._startupError) throw this._startupError
     if (!this.globalData.isDemo) return this.cloud().uploadFile(options)
     const promise = new Promise((resolve, reject) => {
       if (!options.filePath) return reject(new Error('请选择图片'))
@@ -117,6 +126,7 @@ App({
   },
 
   deleteFile(options) {
+    if (this._startupError) throw this._startupError
     if (!this.globalData.isDemo) return this.cloud().deleteFile(options)
     // 本地照片可能被商品或订单快照复用，移除字段即可保留其他记录的图片。
     const result = { fileList: (options.fileList || []).map(fileID => ({ fileID, status: 0 })), isDemo: true }
@@ -139,10 +149,12 @@ App({
   },
 
   getDemoIdentity() {
+    if (this._startupError) return null
     return this.globalData.isDemo ? this._demo.getIdentity() : null
   },
 
   async setDemoIdentity(identity) {
+    if (this._startupError) throw this._startupError
     if (!this.globalData.isDemo) throw new Error('仅本地体验可以切换身份')
     this._demo.setIdentity(identity)
     this.globalData.demoIdentity = identity
